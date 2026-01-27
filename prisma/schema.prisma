@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// --- ENUMS ---
+enum Role {
+  ADMIN
+  CSR
+  INSTALLER
+  TECH_SUPPORT
+}
+
+enum JobStatus {
+  NEW_LEAD        // Default (Installation Pending)
+  SCHEDULED       // Date set
+  INSTALLED       // Done -> Moves to Tech
+  LEAD_LOST       // Rejected
+  CONFIGURED      // Tech done -> Moves to Activation
+  ACTIVE          // Activation done
+  PAYMENT_PENDING
+  COMPLETED
+}
+
+// --- MODELS ---
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  fullName     String?
+  role         Role     @default(CSR)
+  
+  createdAt    DateTime @default(now())
+  
+  // Relationship: Tracks which leads (clients) this user added
+  clientsAdded Client[] @relation("CreatedBy")
+}
+
+model Client {
+  id          String    @id @default(uuid())
+  fullName    String
+  phoneNumber String    @unique
+  notes       String?
+  
+  // --- LEAD INFO ---
+  email       String?   @unique   
+  dob         DateTime?
+  address     String?
+  state       String?
+  leadSource  String?
+
+  // --- RELATIONSHIPS ---
+  vehicles    Vehicle[]
+  
+  // Link to the User who added this lead
+  createdById String?
+  createdBy   User?     @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  createdAt   DateTime  @default(now())
+}
+
+model Vehicle {
+  id          String    @id @default(uuid())
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  // CHANGED: Replaced make/model with name/year
+  name        String    // e.g. "Toyota Camry"
+  year        String    // e.g. "2015"
+  plateNumber String
+  
+  color       String?
+  jobs        Job[]
+}
+
+model Device {
+  id        String   @id @default(uuid())
+  imei      String   @unique
+  simNumber String
+  type      String
+  status    String   @default("IN_STOCK") 
+  jobId     String?  @unique
+  job       Job?     @relation(fields: [jobId], references: [id])
+}
+
+model Job {
+  id            String    @id @default(uuid())
+  vehicleId     String
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  device        Device?
+  
+  status        JobStatus @default(NEW_LEAD)
+  lostReason    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Installation Data
+  installDate   DateTime?
+  installPhoto  String?
+  odometer      Int?
+  installerName String?
+
+  // Tech Data
+  configurationDate DateTime? // <--- NEW: When Tech Configured it
+  serverConfig      Boolean   @default(false)
+  platformId        String?
+  
+  // CSR / Payment Data
+  onboarded        Boolean   @default(false)
+  paymentStatus    String    @default("UNPAID")
+  amountPaid       Decimal   @default(0.00) // <--- NEW: Track Money
+  paymentCollector String?   // <--- NEW: Who took the money
+}
