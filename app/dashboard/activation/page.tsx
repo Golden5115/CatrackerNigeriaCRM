@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import { Smartphone, CheckCircle, Clock, Car, ArrowRight } from "lucide-react";
 
-const prisma = new PrismaClient();
+
 
 export default async function ActivationPage() {
   // Fetch jobs that are CONFIGURED but not yet Onboarded

@@ -1,21 +1,17 @@
-import { PrismaClient } from "@prisma/client";
-import Link from "next/link";
-import { User, Car, Smartphone, ArrowRight } from "lucide-react";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma" // Ensure this import is correct
+import { User, Car, Smartphone } from "lucide-react";
 
 export default async function SearchPage({
   searchParams,
 }: {
   searchParams: Promise<{ q: string }>;
 }) {
-  const { q } = await searchParams; // Await the search term
+  const { q } = await searchParams;
 
   if (!q) return <div className="text-gray-500">Please enter a search term.</div>;
 
-  // Perform parallel searches
   const [clients, vehicles, devices] = await Promise.all([
-    // 1. Search Clients by Name or Phone
+    // 1. Clients
     prisma.client.findMany({
       where: {
         OR: [
@@ -26,22 +22,21 @@ export default async function SearchPage({
       include: { vehicles: true }
     }),
     
-    // 2. Search Vehicles by Plate, Make, or Model
+    // 2. Vehicles (FIXED QUERY)
     prisma.vehicle.findMany({
       where: {
         OR: [
           { plateNumber: { contains: q, mode: 'insensitive' } },
-          { model: { contains: q, mode: 'insensitive' } }
+          // FIXED: Changed 'model' to 'name'
+          { name: { contains: q, mode: 'insensitive' } } 
         ]
       },
       include: { client: true, jobs: true }
     }),
 
-    // 3. Search Devices by IMEI
+    // 3. Devices
     prisma.device.findMany({
-      where: {
-        imei: { contains: q }
-      },
+      where: { imei: { contains: q } },
       include: { job: { include: { vehicle: { include: { client: true } } } } }
     })
   ]);
@@ -56,13 +51,13 @@ export default async function SearchPage({
 
       {!hasResults && (
          <div className="bg-gray-100 p-8 text-center rounded-xl text-gray-500">
-            No matches found. Try a plate number, name, or phone number.
+            No matches found.
          </div>
       )}
 
       <div className="space-y-8">
         
-        {/* CLIENT MATCHES */}
+        {/* CLIENTS (No changes needed) */}
         {clients.length > 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border">
             <h3 className="flex items-center gap-2 font-bold text-gray-700 mb-4 border-b pb-2">
@@ -84,7 +79,7 @@ export default async function SearchPage({
           </div>
         )}
 
-        {/* VEHICLE MATCHES */}
+        {/* VEHICLES (FIXED DISPLAY) */}
         {vehicles.length > 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border">
             <h3 className="flex items-center gap-2 font-bold text-gray-700 mb-4 border-b pb-2">
@@ -94,7 +89,8 @@ export default async function SearchPage({
               {vehicles.map(v => (
                 <div key={v.id} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-bold">{v.make} {v.model} ({v.plateNumber})</p>
+                    {/* FIXED: Use v.name and v.year instead of v.make/v.model */}
+                    <p className="font-bold">{v.name} {v.year} ({v.plateNumber})</p>
                     <p className="text-sm text-gray-500">Owner: {v.client.fullName}</p>
                   </div>
                   <span className={`px-2 py-1 text-xs rounded font-bold ${
@@ -108,7 +104,7 @@ export default async function SearchPage({
           </div>
         )}
 
-        {/* DEVICE MATCHES */}
+        {/* DEVICES (FIXED DISPLAY) */}
         {devices.length > 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border">
             <h3 className="flex items-center gap-2 font-bold text-gray-700 mb-4 border-b pb-2">
@@ -124,7 +120,8 @@ export default async function SearchPage({
                   {d.job?.vehicle ? (
                      <div className="text-right">
                        <p className="text-sm font-bold">{d.job.vehicle.plateNumber}</p>
-                       <p className="text-xs text-gray-400">Installed on {d.job.vehicle.make}</p>
+                       {/* FIXED: Use d.job.vehicle.name */}
+                       <p className="text-xs text-gray-400">Installed on {d.job.vehicle.name}</p>
                      </div>
                   ) : (
                     <span className="text-xs bg-gray-200 px-2 py-1 rounded">In Stock</span>

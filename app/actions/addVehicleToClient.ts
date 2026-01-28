@@ -1,10 +1,8 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from "@/lib/prisma"
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-
-const prisma = new PrismaClient()
 
 export async function addVehicleToClient(formData: FormData) {
   const clientId = formData.get('clientId') as string
@@ -20,13 +18,14 @@ export async function addVehicleToClient(formData: FormData) {
   const newVehicle = await prisma.vehicle.create({
     data: {
       clientId: clientId,
-      make,
-      model,
+      // FIX: Combine Make/Model into 'name' and add a default year
+      name: `${make} ${model}`.trim(), 
+      year: "Unknown", // Default since the simple form doesn't ask for year
       plateNumber: plate,
     }
   })
 
-  // 2. Start a Job Ticket (Status: NEW_LEAD) so installers can see it
+  // 2. Start a Job Ticket
   await prisma.job.create({
     data: {
       vehicleId: newVehicle.id,

@@ -6,8 +6,6 @@ import { redirect } from 'next/navigation'
 import { verifySession } from '@/lib/session'
 import { cookies } from 'next/headers'
 
-
-
 export async function createLead(formData: FormData) {
   const cookie = (await cookies()).get('session')?.value
   const session = await verifySession(cookie)
@@ -40,19 +38,20 @@ export async function createLead(formData: FormData) {
         }
       })
 
-      // 2. Loop through vehicles
+      // 2. Loop through vehicles (CORRECTED LOGIC HERE)
       for (let i = 0; i < vehicleCount; i++) {
         const name = formData.get(`vehicleName_${i}`) as string
         const year = formData.get(`vehicleYear_${i}`) as string
         const plate = formData.get(`vehiclePlate_${i}`) as string
 
-        if (name && plate) {
+        // ✅ FIXED: Only 'name' is strictly required now.
+        if (name) {
           const newVehicle = await tx.vehicle.create({
             data: {
               clientId: newClient.id,
-              name: name,   // "Toyota Camry"
-              year: year || "Unknown",
-              plateNumber: plate,
+              name: name,   
+              year: year || null,         // Save as null if empty
+              plateNumber: plate || null, // Save as null if empty
             }
           })
 

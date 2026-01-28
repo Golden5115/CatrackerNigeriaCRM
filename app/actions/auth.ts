@@ -1,11 +1,11 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from "@/lib/prisma"
 import { createSession, deleteSession } from '@/lib/session'
 import * as bcrypt from 'bcryptjs'
 import { redirect } from 'next/navigation'
 
-const prisma = new PrismaClient()
+
 
 export async function login(prevState: any, formData: FormData) {
   const email = formData.get('email') as string

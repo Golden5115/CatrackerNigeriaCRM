@@ -1,11 +1,12 @@
 'use server'
 
-import { PrismaClient, Role } from '@prisma/client'
+import { Role } from '@prisma/client'
+import { prisma } from "@/lib/prisma"
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import * as bcrypt from 'bcryptjs' // <--- Import this
 
-const prisma = new PrismaClient()
+
 
 export async function createUser(formData: FormData) {
   const fullName = formData.get('fullName') as string

@@ -1,9 +1,9 @@
 import { activateJob } from "@/app/actions/activateJob";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import { Send, Copy } from "lucide-react";
 
-const prisma = new PrismaClient();
+
 
 export default async function ActivationDetailsPage({ params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;

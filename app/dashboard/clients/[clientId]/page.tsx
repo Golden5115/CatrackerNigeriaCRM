@@ -1,11 +1,11 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import { 
   ArrowLeft, Car, Smartphone, User, Calendar, CreditCard, 
   MapPin, Hash, CheckCircle 
 } from "lucide-react";
 
-const prisma = new PrismaClient();
+
 
 export default async function ClientDetailsPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;

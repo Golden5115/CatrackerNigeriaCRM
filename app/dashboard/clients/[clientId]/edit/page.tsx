@@ -1,7 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import EditClientForm from "@/components/EditClientForm"; // <--- Import new component
 
-const prisma = new PrismaClient();
+
 
 export default async function EditClientPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;

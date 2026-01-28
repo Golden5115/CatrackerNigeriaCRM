@@ -1,10 +1,10 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from "@/lib/prisma"
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-const prisma = new PrismaClient()
+
 
 // --- DELETE CLIENT ---
 export async function deleteClient(clientId: string) {

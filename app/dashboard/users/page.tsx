@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import { Plus, Shield, Wrench, Headset, User, Trash2 } from "lucide-react";
 
-const prisma = new PrismaClient();
+
 
 export default async function UsersPage() {
   const users = await prisma.user.findMany({

@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import { completeSetup } from "@/app/actions/completeSetup";
 import { CheckCircle, Copy } from "lucide-react";
 
-const prisma = new PrismaClient();
+
 
 export default async function TechSetupPage({ 
   params 

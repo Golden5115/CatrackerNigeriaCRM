@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import { submitInstallation } from "@/app/actions/submitInstallation";
 import { Camera, Save } from "lucide-react";
 
-const prisma = new PrismaClient();
+
 
 // FIX: Define params as a Promise
 export default async function SubmitJobPage({ 

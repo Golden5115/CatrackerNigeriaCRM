@@ -1,14 +1,14 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from "@/lib/prisma"
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-const prisma = new PrismaClient()
+
 
 export async function submitInstallation(formData: FormData) {
   const jobId = formData.get('jobId') as string
-  const installerId = formData.get('installerId') as string // Captured from form
+   // Captured from form
   const imei = formData.get('imei') as string
   const sim = formData.get('sim') as string
   const odometer = formData.get('odometer') as string
@@ -35,7 +35,7 @@ export async function submitInstallation(formData: FormData) {
     where: { id: jobId },
     data: {
       status: 'INSTALLED',
-      assignedToId: installerId, // Assigning the installer here!
+      // Assigning the installer here!
       installDate: new Date(),
       odometer: parseInt(odometer) || 0,
       // Link the device we just created/found

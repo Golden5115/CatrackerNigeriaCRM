@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import { MapPin, User, Car } from "lucide-react";
 
-const prisma = new PrismaClient();
+
 
 export default async function InstallerJobList() {
   // Fetch ALL jobs that are waiting for installation (NEW_LEAD)
@@ -30,7 +30,7 @@ export default async function InstallerJobList() {
           >
             <div className="flex justify-between items-start mb-2">
               <h3 className="font-bold text-lg text-gray-800">
-                {job.vehicle.make} {job.vehicle.model}
+                {job.vehicle.name} {job.vehicle.year}
               </h3>
               <span className="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full font-bold">
                 PENDING

@@ -1,9 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"
 import { recordPayment } from "@/app/actions/recordPayment";
 import { Phone, CreditCard, CheckCircle, AlertCircle } from "lucide-react";
 import { markPaymentAsDone } from "@/app/actions/markPayment";
 
-const prisma = new PrismaClient();
+
 
 export default async function PaymentsPage() {
   // Fetch jobs where payment is NOT 'PAID' (So 'UNPAID' or 'DUE')

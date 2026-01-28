@@ -34,8 +34,7 @@ export default function CreateLeadForm() {
     setVehicles(newList)
   }
 
-  // Common Input Class (Fixed Padding)
-  // pl-10 creates space for the icon on the left
+  // Styles
   const inputClass = "w-full border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500 py-2.5 pr-4 pl-10 text-sm text-gray-700 placeholder-gray-400";
   const selectClass = "w-full border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500 py-2.5 px-4 text-sm text-gray-700 bg-white";
   const selectIconClass = "w-full border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500 py-2.5 pr-4 pl-10 text-sm text-gray-700 bg-white";
@@ -78,14 +77,16 @@ export default function CreateLeadForm() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Email Address</label>
+            <label className="block text-xs font-bold text-gray-500 mb-1">Email Address <span className="text-gray-400 font-normal">(Optional)</span></label>
             <div className="relative">
               <Mail className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              {/* REMOVED required */}
               <input name="email" type="email" placeholder="john@example.com" className={inputClass} />
             </div>
           </div>
         </div>
 
+        {/* Address and State/Source (Keep as is) */}
         <div>
           <label className="block text-xs font-bold text-gray-500 mb-1">Address</label>
           <div className="relative">
@@ -95,7 +96,6 @@ export default function CreateLeadForm() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* UPDATED: ALL NIGERIAN STATES */}
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1">State</label>
             <select name="state" className={selectClass}>
@@ -106,7 +106,6 @@ export default function CreateLeadForm() {
             </select>
           </div>
           
-          {/* UPDATED: ADDED TIKTOK & WHATSAPP */}
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1">Lead Source</label>
             <div className="relative">
@@ -140,7 +139,6 @@ export default function CreateLeadForm() {
         {vehicles.map((vehicle, index) => (
           <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-white p-4 rounded-lg shadow-sm border border-gray-100 relative">
             
-            {/* NAME */}
             <div className="md:col-span-5">
               <label className="block text-xs font-bold text-gray-500 mb-1">Vehicle Name *</label>
               <input 
@@ -153,9 +151,9 @@ export default function CreateLeadForm() {
               />
             </div>
 
-            {/* YEAR */}
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-gray-500 mb-1">Year</label>
+              {/* REMOVED required */}
               <input 
                 name={`vehicleYear_${index}`} 
                 placeholder="2015" 
@@ -165,14 +163,13 @@ export default function CreateLeadForm() {
               />
             </div>
 
-            {/* PLATE (With Icon) */}
             <div className="md:col-span-4">
-              <label className="block text-xs font-bold text-gray-500 mb-1">Plate Number *</label>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Plate Number <span className="text-gray-300 font-normal">(Optional)</span></label>
               <div className="relative">
                 <Hash className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                {/* REMOVED required */}
                 <input 
                   name={`vehiclePlate_${index}`} 
-                  required 
                   placeholder="ABC-123-XY" 
                   value={vehicle.plate}
                   onChange={(e) => handleVehicleChange(index, 'plate', e.target.value)}
@@ -181,7 +178,6 @@ export default function CreateLeadForm() {
               </div>
             </div>
 
-            {/* DELETE BUTTON */}
             <div className="md:col-span-1 flex justify-center pb-2">
               {vehicles.length > 1 && (
                 <button type="button" onClick={() => removeVehicle(index)} className="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-lg transition">
@@ -194,7 +190,6 @@ export default function CreateLeadForm() {
         <input type="hidden" name="vehicleCount" value={vehicles.length} />
       </div>
 
-      {/* ACTIONS */}
       <div className="pt-6 flex gap-4 border-t">
          <button type="submit" className="w-full bg-[#84c47c] text-white py-3 rounded-xl font-bold hover:bg-[#6aa663] transition shadow-lg text-lg">
            Create Lead & Job Tickets
