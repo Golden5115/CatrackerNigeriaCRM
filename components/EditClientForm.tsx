@@ -4,12 +4,12 @@ import { updateClient, deleteVehicle } from "@/app/actions/manageClient"
 import { useState } from "react"
 import { Plus, Trash2, Car, User, Phone, Mail, MapPin, Globe, Hash, Calendar, Save } from "lucide-react"
 
-// Types for props
+// 1. UPDATED TYPES (Allow null)
 type VehicleData = {
   id: string;
   name: string;
-  year: string;
-  plateNumber: string;
+  year: string | null;          // <--- Changed to allow null
+  plateNumber: string | null;   // <--- Changed to allow null
 }
 
 type ClientData = {
@@ -33,7 +33,6 @@ const NIGERIAN_STATES = [
 ];
 
 export default function EditClientForm({ client }: { client: ClientData }) {
-  // Initialize state with existing vehicles
   const [vehicles, setVehicles] = useState(client.vehicles);
 
   const addVehicle = () => {
@@ -44,7 +43,7 @@ export default function EditClientForm({ client }: { client: ClientData }) {
   const handleDeleteVehicle = async (index: number, vehicleId: string) => {
     if (confirm("Are you sure? This will delete the vehicle and its history.")) {
       if (vehicleId !== 'NEW') {
-        await deleteVehicle(vehicleId); // Server Action
+        await deleteVehicle(vehicleId); 
       }
       const newList = [...vehicles];
       newList.splice(index, 1);
@@ -162,7 +161,6 @@ export default function EditClientForm({ client }: { client: ClientData }) {
         {vehicles.map((vehicle, index) => (
           <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-white p-4 rounded-lg shadow-sm border border-gray-100 relative">
             
-            {/* HIDDEN ID FIELD */}
             <input type="hidden" name={`vehicleId_${index}`} value={vehicle.id} />
 
             {/* NAME */}
@@ -184,7 +182,8 @@ export default function EditClientForm({ client }: { client: ClientData }) {
               <input 
                 name={`vehicleYear_${index}`} 
                 placeholder="2015" 
-                value={vehicle.year}
+                // 2. SAFE VALUE: Use || "" to handle nulls
+                value={vehicle.year || ""}
                 onChange={(e) => handleVehicleChange(index, 'year', e.target.value)}
                 className="w-full border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 py-2.5 px-3 text-sm" 
               />
@@ -197,16 +196,16 @@ export default function EditClientForm({ client }: { client: ClientData }) {
                 <Hash className="absolute left-3 top-2.5 text-gray-400" size={16} />
                 <input 
                   name={`vehiclePlate_${index}`} 
-                  required 
+                  // 3. OPTIONAL: Removed 'required'
                   placeholder="ABC-123-XY" 
-                  value={vehicle.plateNumber}
+                  // 4. SAFE VALUE: Use || "" to handle nulls
+                  value={vehicle.plateNumber || ""}
                   onChange={(e) => handleVehicleChange(index, 'plateNumber', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 py-2.5 pr-4 pl-10 text-sm font-mono uppercase" 
                 />
               </div>
             </div>
 
-            {/* DELETE */}
             <div className="md:col-span-1 flex justify-center pb-2">
               <button 
                 type="button" 
@@ -219,11 +218,9 @@ export default function EditClientForm({ client }: { client: ClientData }) {
             </div>
           </div>
         ))}
-        {/* Pass count to server */}
         <input type="hidden" name="vehicleCount" value={vehicles.length} />
       </div>
 
-      {/* ACTIONS */}
       <div className="pt-6 flex gap-4 border-t">
          <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg flex justify-center items-center gap-2">
            <Save size={18} />
