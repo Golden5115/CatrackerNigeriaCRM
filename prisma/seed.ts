@@ -4,22 +4,29 @@ import * as bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  // 1. Hash the password securely
-  const hashedPassword = await bcrypt.hash('admin123', 10)
+  // 👇 CHANGE THESE TWO LINES TO YOUR PREFERRED LOGIN 👇
+  const MY_EMAIL = 'admin@cartrackernigeria.com' 
+  const MY_PASSWORD = 'MySecretPassword2026!'
 
-  // 2. Create the Admin User
+  // 1. Hash the password securely
+  const hashedPassword = await bcrypt.hash(MY_PASSWORD, 10)
+
+  // 2. Create or Update the Admin User
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@trackmaster.com' },
-    update: { password: hashedPassword }, // Update password if exists
+    where: { email: MY_EMAIL },
+    update: { 
+      password: hashedPassword,
+      fullName: 'System Administrator' 
+    },
     create: {
-      email: 'admin@trackmaster.com',
+      email: MY_EMAIL,
       fullName: 'System Administrator',
       password: hashedPassword,
       role: 'ADMIN',
     },
   })
 
-  console.log('✅ Default Admin created: admin@trackmaster.com / admin123')
+  console.log(`✅ Admin account ready: ${MY_EMAIL}`)
 }
 
 main()

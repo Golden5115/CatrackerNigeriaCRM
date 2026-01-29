@@ -1,19 +1,19 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react' // <--- Added useState
 import { login } from '@/app/actions/auth'
-import { Lock, Mail, ShieldCheck } from 'lucide-react'
+import { Lock, Mail, ShieldCheck, Eye, EyeOff } from 'lucide-react' // <--- Added Eye icons
 import Logo from '@/components/Logo'
 
 export default function LoginPage() {
   const [state, action, isPending] = useActionState(login, undefined)
+  const [showPassword, setShowPassword] = useState(false) // <--- New State
 
   return (
     <div className="min-h-screen flex bg-white">
       
-      {/* LEFT SIDE: Brand Identity (Hidden on mobile) */}
+      {/* LEFT SIDE: Brand Identity */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#2d4a2a] flex-col justify-between p-12 text-white relative overflow-hidden">
-        {/* Abstract Background Decoration */}
         <div className="absolute top-0 left-0 w-full h-full opacity-10">
            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
              <path d="M0 0 L100 0 L100 100 Z" fill="#84c47c" />
@@ -34,7 +34,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 text-sm text-green-200/60">
-          © 2025 CTN CRM. All rights reserved.
+          © 2026 CTN CRM. All rights reserved.
         </div>
       </div>
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
                   name="email" 
                   type="email" 
                   required 
-                  className="input-field pl-10" 
+                  className="w-full border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-600 py-3 pl-10 pr-4 text-sm bg-white" 
                   placeholder="admin@company.com"
                 />
               </div>
@@ -75,11 +75,20 @@ export default function LoginPage() {
                 <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
                 <input 
                   name="password" 
-                  type="password" 
+                  type={showPassword ? "text" : "password"} // <--- Dynamic Type
                   required 
-                  className="input-field pl-10" 
+                  className="w-full border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-600 py-3 pl-10 pr-10 text-sm bg-white" 
                   placeholder="••••••••"
                 />
+                
+                {/* TOGGLE BUTTON */}
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
@@ -89,7 +98,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            <button type="submit" disabled={isPending} className="btn-primary w-full flex justify-center items-center gap-2">
+            <button type="submit" disabled={isPending} className="w-full bg-[#2d4a2a] hover:bg-[#1f351d] text-white font-bold py-3 rounded-xl transition shadow-lg flex justify-center items-center gap-2">
               {isPending ? 'Accessing Secure Area...' : 'Sign In to Dashboard'}
             </button>
           </form>
