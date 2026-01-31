@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma"
-import Link from "next/link";
-import { Server, User, Car, ArrowRight } from "lucide-react";
+import { Server, Car, ArrowRight } from "lucide-react";
+import LoadingLink from "@/components/LoadingLink";
 
-
+export const dynamic = 'force-dynamic';
 
 export default async function TechSupportPage() {
   // Fetch jobs waiting for Tech Configuration (Status: INSTALLED)
@@ -44,12 +44,12 @@ export default async function TechSupportPage() {
               </div>
             </div>
 
-            <Link 
+            <LoadingLink 
               href={`/dashboard/tech/${job.id}`}
               className="w-full flex items-center justify-center gap-2 bg-[#84c47c] text-white py-2 rounded-lg font-bold hover:bg-[#6aa663] transition"
             >
               Start Configuration <ArrowRight size={16} />
-            </Link>
+            </LoadingLink>
 
           </div>
         ))}

@@ -1,5 +1,6 @@
 import { createUser } from "@/app/actions/createUser";
 import Link from "next/link";
+import SubmitButton from "@/components/SubmitButton";
 
 export default function CreateUserPage() {
   return (
@@ -47,9 +48,12 @@ export default function CreateUserPage() {
              <Link href="/dashboard/users" className="px-4 py-2 border rounded-lg hover:bg-gray-50 text-gray-600">
                Cancel
              </Link>
-             <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 shadow-lg">
-               Create Account
-             </button>
+             <SubmitButton 
+    className="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 shadow-lg"
+    loadingText="Creating Account..."
+  >
+    Create Staff Account
+  </SubmitButton>
           </div>
         </form>
       </div>

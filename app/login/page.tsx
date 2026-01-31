@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react' // <--- Added useState
 import { login } from '@/app/actions/auth'
-import { Lock, Mail, ShieldCheck, Eye, EyeOff } from 'lucide-react' // <--- Added Eye icons
+import { Lock, Mail, ShieldCheck, Eye, EyeOff, Loader2 } from 'lucide-react' // <--- Added Eye icons
 import Logo from '@/components/Logo'
 
 export default function LoginPage() {
@@ -98,9 +98,20 @@ export default function LoginPage() {
               </div>
             )}
 
-            <button type="submit" disabled={isPending} className="w-full bg-[#2d4a2a] hover:bg-[#1f351d] text-white font-bold py-3 rounded-xl transition shadow-lg flex justify-center items-center gap-2">
-              {isPending ? 'Accessing Secure Area...' : 'Sign In to Dashboard'}
-            </button>
+            <button 
+  type="submit" 
+  disabled={isPending} 
+  className="w-full bg-[#2d4a2a] hover:bg-[#1f351d] text-white font-bold py-3 rounded-xl transition shadow-lg flex justify-center items-center gap-2"
+>
+  {isPending ? (
+    <>
+      <Loader2 className="animate-spin" size={20} />
+      <span>Verifying Credentials...</span>
+    </>
+  ) : (
+    'Sign In to Dashboard'
+  )}
+</button>
           </form>
 
         </div>

@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { updateLeadStatus } from "@/app/actions/updateLead"
-import { Calendar, CheckCircle, XCircle, AlertTriangle } from "lucide-react"
+import { Calendar, CheckCircle, XCircle, AlertTriangle, Wrench } from "lucide-react"
+import SubmitButton from "@/components/SubmitButton"
 
-// ⬇️ THIS INTERFACE WAS MISSING OR INCORRECT
 interface LeadActionMenuProps {
   jobId: string;
   currentStatus: string;
@@ -19,7 +19,7 @@ export default function LeadActionMenu({ jobId, currentStatus, scheduleDate }: L
     return (
       <div className="flex flex-col gap-2 items-end">
         
-        {/* SCHEDULE BUTTON */}
+        {/* SCHEDULE BUTTON (Toggle) */}
         <button 
           onClick={() => setMode('SCHEDULE')}
           className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 flex items-center gap-2 w-fit"
@@ -31,7 +31,7 @@ export default function LeadActionMenu({ jobId, currentStatus, scheduleDate }: L
         </button>
 
         <div className="flex gap-2">
-           {/* REJECT BUTTON */}
+           {/* REJECT BUTTON (Toggle) */}
            <button 
             onClick={() => setMode('LOST')}
             className="text-gray-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition"
@@ -40,14 +40,17 @@ export default function LeadActionMenu({ jobId, currentStatus, scheduleDate }: L
             <XCircle size={20} />
           </button>
 
-          {/* INSTALL DONE BUTTON (Primary) */}
+          {/* INSTALL DONE BUTTON (Action) */}
           <form action={updateLeadStatus}>
             <input type="hidden" name="jobId" value={jobId} />
             <input type="hidden" name="actionType" value="INSTALLED" />
-            <button className="bg-green-600 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-green-700 flex items-center gap-1.5 shadow-sm">
+            <SubmitButton 
+              className="bg-green-600 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-green-700 flex items-center gap-1.5 shadow-sm"
+              loadingText="Done"
+            >
               <CheckCircle size={14} />
               Done
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>
@@ -71,9 +74,14 @@ export default function LeadActionMenu({ jobId, currentStatus, scheduleDate }: L
            <option value="Cancelled">Client Cancelled</option>
         </select>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center mt-1">
           <button type="button" onClick={() => setMode('VIEW')} className="text-xs text-gray-500 underline">Cancel</button>
-          <button type="submit" className="bg-red-600 text-white text-xs px-2 py-1 rounded font-bold">Confirm Lost</button>
+          <SubmitButton 
+            className="bg-red-600 text-white text-xs px-2 py-1 rounded font-bold ml-auto"
+            loadingText="..."
+          >
+            Confirm Lost
+          </SubmitButton>
         </div>
       </form>
     )
@@ -89,9 +97,14 @@ export default function LeadActionMenu({ jobId, currentStatus, scheduleDate }: L
         <label className="text-xs font-bold text-blue-800">Set Install Date:</label>
         <input type="date" name="scheduleDate" required className="text-xs p-1 rounded border-blue-200" />
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center mt-1">
           <button type="button" onClick={() => setMode('VIEW')} className="text-xs text-gray-500 underline">Cancel</button>
-          <button type="submit" className="bg-blue-600 text-white text-xs px-2 py-1 rounded font-bold">Save Date</button>
+          <SubmitButton 
+            className="bg-blue-600 text-white text-xs px-2 py-1 rounded font-bold ml-auto"
+            loadingText="..."
+          >
+            Save Date
+          </SubmitButton>
         </div>
       </form>
     )

@@ -3,6 +3,7 @@
 import { createLead } from "@/app/actions/createLead"
 import { useState } from "react"
 import { Plus, Trash2, Car, User, Phone, Mail, MapPin, Globe, Hash, Calendar } from "lucide-react"
+import SubmitButton from "@/components/SubmitButton"
 
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
@@ -191,9 +192,12 @@ export default function CreateLeadForm() {
       </div>
 
       <div className="pt-6 flex gap-4 border-t">
-         <button type="submit" className="w-full bg-[#84c47c] text-white py-3 rounded-xl font-bold hover:bg-[#6aa663] transition shadow-lg text-lg">
-           Create Lead & Job Tickets
-         </button>
+         <SubmitButton 
+     className="w-full bg-[#84c47c] text-white py-3 rounded-xl font-bold hover:bg-[#6aa663] shadow-lg text-lg"
+     loadingText="Creating Lead..."
+   >
+     Create Lead & Job Tickets
+   </SubmitButton>
       </div>
     </form>
   )

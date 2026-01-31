@@ -1,6 +1,7 @@
 import { submitTechConfiguration } from "@/app/actions/workflow";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import SubmitButton from "@/components/SubmitButton";
 import { Save, UserCheck, AlertTriangle, Mail, Hash, Calendar } from "lucide-react";
 
 export default async function TechConfigPage({ 
@@ -126,10 +127,13 @@ export default async function TechConfigPage({
         {/* Actions */}
         <div className="pt-6 flex gap-4 border-t">
            <Link href="/dashboard/tech" className="px-6 py-3 border rounded-xl hover:bg-gray-50 text-gray-600 font-medium">Cancel</Link>
-           <button type="submit" className="flex-1 bg-[#84c47c] text-white py-3 rounded-xl font-bold hover:bg-[#6aa663] transition shadow-lg flex justify-center items-center gap-2">
-             <Save size={18} />
-             Save & Send to Activation
-           </button>
+           <SubmitButton 
+      className="flex-1 bg-[#84c47c] text-white py-3 rounded-xl font-bold hover:bg-[#6aa663] shadow-lg"
+      loadingText="Saving Configuration..."
+   >
+     <Save size={18} />
+     Save & Send to Activation
+   </SubmitButton>
         </div>
       </form>
     </div>

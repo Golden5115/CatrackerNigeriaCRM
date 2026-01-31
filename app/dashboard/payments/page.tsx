@@ -1,13 +1,9 @@
 import { prisma } from "@/lib/prisma"
-import { recordPayment } from "@/app/actions/recordPayment";
-import { Phone, CreditCard, CheckCircle, AlertCircle } from "lucide-react";
+import { Phone, CheckCircle, AlertCircle } from "lucide-react";
 import { markPaymentAsDone } from "@/app/actions/markPayment";
-
-
+import SubmitButton from "@/components/SubmitButton";
 
 export default async function PaymentsPage() {
-  // Fetch jobs where payment is NOT 'PAID' (So 'UNPAID' or 'DUE')
-  // And the job must be at least INSTALLED (we don't collect payment for new leads usually)
   const jobs = await prisma.job.findMany({
     where: { 
       paymentStatus: { not: 'PAID' },
@@ -64,33 +60,36 @@ export default async function PaymentsPage() {
               </div>
 
               <form action={markPaymentAsDone} className="flex items-end gap-2">
-  <input type="hidden" name="jobId" value={job.id} />
-  
-  <div>
-    <label className="text-[10px] text-gray-500 uppercase font-bold block">Amount (₦)</label>
-    <input 
-      name="amount" 
-      type="number" 
-      required 
-      placeholder="0.00" 
-      className="w-24 px-2 py-1 text-sm border rounded"
-    />
-  </div>
+                <input type="hidden" name="jobId" value={job.id} />
+                
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase font-bold block">Amount (₦)</label>
+                  <input 
+                    name="amount" 
+                    type="number" 
+                    required 
+                    placeholder="0.00" 
+                    className="w-24 px-2 py-1 text-sm border rounded"
+                  />
+                </div>
 
-  <div>
-    <label className="text-[10px] text-gray-500 uppercase font-bold block">Collector</label>
-    <input 
-      name="collector" 
-      required 
-      placeholder="Name" 
-      className="w-24 px-2 py-1 text-sm border rounded"
-    />
-  </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase font-bold block">Collector</label>
+                  <input 
+                    name="collector" 
+                    required 
+                    placeholder="Name" 
+                    className="w-24 px-2 py-1 text-sm border rounded"
+                  />
+                </div>
 
-  <button className="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold h-fit mb-[1px]">
-    Confirm
-  </button>
-</form>
+                <SubmitButton 
+                  className="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold h-fit mb-[1px]"
+                  loadingText="..."
+                >
+                  Confirm
+                </SubmitButton>
+              </form>
             </div>
 
           </div>

@@ -1,9 +1,8 @@
 import { activateJob } from "@/app/actions/activateJob";
 import { prisma } from "@/lib/prisma"
 import Link from "next/link";
-import { Send, Copy } from "lucide-react";
-
-
+import { Send } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
 
 export default async function ActivationDetailsPage({ params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
@@ -48,13 +47,13 @@ export default async function ActivationDetailsPage({ params }: { params: Promis
 
           <div>
              <label className="block text-sm font-medium text-gray-700 mb-1">Generated Username (Optional)</label>
-             <input name="username" placeholder="e.g. client_name01" className="input-field" />
+             <input name="username" placeholder="e.g. client_name01" className="w-full border border-gray-300 rounded-lg p-2" />
              <p className="text-xs text-gray-500 mt-1">Record the username created on the tracking platform.</p>
           </div>
 
           <div>
              <label className="block text-sm font-medium text-gray-700 mb-1">Generated Password (Optional)</label>
-             <input name="password" placeholder="e.g. Track2024!" className="input-field" />
+             <input name="password" placeholder="e.g. Track2024!" className="w-full border border-gray-300 rounded-lg p-2" />
           </div>
 
           <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
@@ -68,10 +67,14 @@ export default async function ActivationDetailsPage({ params }: { params: Promis
              <Link href="/dashboard/activation" className="px-6 py-3 border rounded-xl hover:bg-gray-50 text-gray-600 font-medium">
                Cancel
              </Link>
-             <button type="submit" className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg flex justify-center items-center gap-2">
+             
+             <SubmitButton 
+               className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg text-lg"
+               loadingText="Activating..."
+             >
                <Send size={18} />
                Mark as Active & Sent
-             </button>
+             </SubmitButton>
           </div>
         </form>
 
