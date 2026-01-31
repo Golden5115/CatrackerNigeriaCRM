@@ -3,6 +3,7 @@ import { verifySession } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ShieldCheck, ArrowRight, Activity, Users, MapPin } from 'lucide-react'
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   // 1. Check if user is already logged in

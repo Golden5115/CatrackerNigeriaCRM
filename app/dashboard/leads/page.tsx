@@ -7,6 +7,7 @@ import LeadActionMenu from "@/components/LeadActionMenu";
 import SortControl from "@/components/SortControl"; 
 import DeleteClientButton from "@/components/DeleteClientButton";
 
+export const dynamic = 'force-dynamic';
 
 
 export default async function LeadsPage({

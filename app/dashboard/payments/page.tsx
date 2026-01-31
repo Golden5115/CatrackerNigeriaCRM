@@ -3,6 +3,8 @@ import { Phone, CheckCircle, AlertCircle } from "lucide-react";
 import { markPaymentAsDone } from "@/app/actions/markPayment";
 import SubmitButton from "@/components/SubmitButton";
 
+export const dynamic = 'force-dynamic';
+
 export default async function PaymentsPage() {
   const jobs = await prisma.job.findMany({
     where: { 

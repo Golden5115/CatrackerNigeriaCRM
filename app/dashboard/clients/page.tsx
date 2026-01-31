@@ -7,7 +7,7 @@ import {
 import DeleteClientButton from "@/components/DeleteClientButton";
 import SortControl from "@/components/SortControl"; 
 
-
+export const dynamic = 'force-dynamic';
 
 export default async function ClientsPage({
   searchParams,
