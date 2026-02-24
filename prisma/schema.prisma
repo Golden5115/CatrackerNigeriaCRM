@@ -17,29 +17,36 @@ enum Role {
 }
 
 enum JobStatus {
-  NEW_LEAD        // Default (Installation Pending)
-  SCHEDULED       // Date set
-  INSTALLED       // Done -> Moves to Tech
-  LEAD_LOST       // Rejected
-  CONFIGURED      // Tech done -> Moves to Activation
-  ACTIVE          // Activation done
-  PAYMENT_PENDING
-  COMPLETED
+  NEW_LEAD
+  SCHEDULED
+  IN_PROGRESS
+  PENDING_QC
+  CONFIGURED
+  ACTIVE
+  LEAD_LOST
+}
+
+enum StockStatus {
+  IN_STOCK
+  INSTALLED
+  FAULTY
+  RETIRED
 }
 
 // --- MODELS ---
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  password     String
-  fullName     String?
-  role         Role     @default(CSR)
+  id             String    @id @default(uuid())
+  email          String    @unique
+  password       String
+  fullName       String?
+  role           Role      @default(CSR)
+  accessibleModules String[] @default([]) // Stores things like ["LEADS", "TECH", "PAYMENTS"]
   
-  createdAt    DateTime @default(now())
+  createdAt      DateTime  @default(now())
   
-  // Relationship: Tracks which leads (clients) this user added
-  clientsAdded Client[] @relation("CreatedBy")
+  clientsAdded   Client[]  @relation("CreatedBy")
+  installerJobs  Job[]     @relation("InstallerJobs")
 }
 
 model Client {
@@ -58,7 +65,6 @@ model Client {
   // --- RELATIONSHIPS ---
   vehicles    Vehicle[]
   
-  // Link to the User who added this lead
   createdById String?
   createdBy   User?     @relation("CreatedBy", fields: [createdById], references: [id])
   
@@ -70,51 +76,71 @@ model Vehicle {
   clientId    String
   client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   
-  name        String    // e.g. "Toyota Camry"
-  
-  // CHANGED: Added '?' to make these optional
+  name        String    
   year        String?    
   plateNumber String?
-  
   color       String?
   jobs        Job[]
 }
 
+// 3. Independent Device Table (IMEI Only)
 model Device {
-  id        String   @id @default(uuid())
-  imei      String   @unique
-  simNumber String
-  type      String
-  status    String   @default("IN_STOCK") 
-  jobId     String?  @unique
-  job       Job?     @relation(fields: [jobId], references: [id])
+  id        String       @id @default(cuid())
+  imei      String       @unique
+  status    StockStatus  @default(IN_STOCK)
+  
+  job       Job?
+  createdAt DateTime     @default(now())
+}
+
+// 4. Independent SIM Table (Number Only)
+model SimCard {
+  id        String       @id @default(cuid())
+  simNumber String       @unique
+  network   String?      
+  status    StockStatus  @default(IN_STOCK)
+
+  job       Job?
+  createdAt DateTime     @default(now())
 }
 
 model Job {
-  id            String    @id @default(uuid())
-  vehicleId     String
-  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  device        Device?
+  id              String      @id @default(uuid())
+  vehicleId       String
+  vehicle         Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   
-  status        JobStatus @default(NEW_LEAD)
-  lostReason    String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  // ❌ DELETED THE DUPLICATE LINE THAT WAS HERE ❌
+
+  installerId     String?
+  installer       User?       @relation("InstallerJobs", fields: [installerId], references: [id])
+  
+  status          JobStatus   @default(NEW_LEAD)
+  
+  // 2. Separate Relations for Device and SIM
+  deviceId        String?     @unique
+  device          Device?     @relation(fields: [deviceId], references: [id])
+
+  simCardId       String?     @unique
+  simCard         SimCard?    @relation(fields: [simCardId], references: [id])
+
+  lostReason      String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
   
   // Installation Data
-  installDate   DateTime?
-  installPhoto  String?
-  odometer      Int?
-  installerName String?
+  installDate     DateTime?
+  installPhoto    String?
+  odometer        Int?
+  installerName   String?
 
   // Tech Data
-  configurationDate DateTime? // <--- NEW: When Tech Configured it
+  configurationDate DateTime? 
   serverConfig      Boolean   @default(false)
   platformId        String?
   
   // CSR / Payment Data
-  onboarded        Boolean   @default(false)
-  paymentStatus    String    @default("UNPAID")
-  amountPaid       Decimal   @default(0.00) // <--- NEW: Track Money
-  paymentCollector String?   // <--- NEW: Who took the money
+  onboarded         Boolean   @default(false)
+  paymentStatus     String    @default("UNPAID")
+  amountPaid        Decimal   @default(0.00) 
+  paymentCollector  String?   
 }

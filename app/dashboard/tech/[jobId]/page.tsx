@@ -1,141 +1,139 @@
-import { submitTechConfiguration } from "@/app/actions/workflow";
-import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import SubmitButton from "@/components/SubmitButton";
-import { Save, UserCheck, AlertTriangle, Mail, Hash, Calendar } from "lucide-react";
+import { prisma } from "@/lib/prisma"
+import { notFound, redirect } from "next/navigation"
+import SubmitButton from "@/components/SubmitButton"
+import { CheckCircle, Car, User, ArrowLeft, ShieldCheck, Hash } from "lucide-react"
+import Link from "next/link"
+import { revalidatePath } from "next/cache"
 
-export default async function TechConfigPage({ 
-  params,
-  searchParams 
+export default async function TechVerificationPage({ 
+  params 
 }: { 
-  params: Promise<{ jobId: string }>,
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  params: Promise<{ jobId: string }> 
 }) {
   const { jobId } = await params;
-  const { error } = await searchParams;
-
+  
+  // 1. Fetch the Job, including the Installer and Devices
   const job = await prisma.job.findUnique({
     where: { id: jobId },
-    include: { vehicle: { include: { client: true } } }
-  });
+    include: {
+      vehicle: { include: { client: true } },
+      device: true,
+      simCard: true,
+      installer: true // Grabs the name of who claimed it
+    }
+  })
 
-  if (!job) return <div>Job not found</div>;
+  if (!job) return notFound()
 
-  // Check what is missing
-  const needsEmail = !job.vehicle.client.email;
-  const needsPlate = !job.vehicle.plateNumber;
-  const needsYear = !job.vehicle.year;
+  // 2. Inline Server Action: Approve the job
+  async function verifyAndSaveJob(formData: FormData) {
+    'use server'
+    const imei = formData.get('imei') as string
+    const simNumber = formData.get('simNumber') as string
+    const plateNumber = formData.get('plateNumber') as string
+    
+    // Update Device/SIM just in case the Tech corrected a typo
+    if (job?.deviceId) {
+       await prisma.device.update({ where: { id: job.deviceId }, data: { imei } })
+    }
+    if (job?.simCardId) {
+       await prisma.simCard.update({ where: { id: job.simCardId }, data: { simNumber } })
+    }
+    
+    // Update Vehicle Plate Number if corrected
+    if (job?.vehicleId) {
+       await prisma.vehicle.update({ where: { id: job.vehicleId }, data: { plateNumber } })
+    }
+
+    // Mark Job as Configured
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: 'CONFIGURED',
+        configurationDate: new Date(),
+        serverConfig: true
+      }
+    })
+    
+    revalidatePath('/dashboard/tech')
+    revalidatePath('/dashboard/activation')
+    redirect('/dashboard/tech') // Send them back to their queue
+  }
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Device Configuration</h2>
-        <p className="text-gray-500">
-          Configuring <span className="font-bold text-[#84c47c]">{job.vehicle.name}</span> 
-          {' '}for {job.vehicle.client.fullName}
-        </p>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/dashboard/tech" className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition">
+          <ArrowLeft size={20} className="text-gray-600" />
+        </Link>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Quality Control & Verification</h2>
+          <p className="text-gray-500">Verify the field data before sending to onboarding.</p>
+        </div>
       </div>
 
-      {/* ERROR ALERTS (Keep existing ones) */}
-      {error === 'imei_taken' && (
-         // ... existing error UI ...
-         <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-           <h3 className="font-bold text-red-800">Error: Duplicate IMEI</h3>
-         </div>
-      )}
-      {error === 'email_taken' && (
-         <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-           <h3 className="font-bold text-red-800">Error: Email Taken</h3>
-           <p className="text-sm text-red-700">The email you tried to add is already in use by another client.</p>
-         </div>
-      )}
+      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+        {/* Read-Only Context Data */}
+        <div className="bg-blue-50 p-6 border-b border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div>
+             <p className="text-xs font-bold text-blue-800 uppercase mb-1 flex items-center gap-1"><User size={14}/> Installed By</p>
+             <p className="font-medium text-gray-900 text-lg">{job.installer?.fullName || "Unknown Installer"}</p>
+           </div>
+           <div>
+             <p className="text-xs font-bold text-blue-800 uppercase mb-1 flex items-center gap-1"><Car size={14}/> Vehicle Model</p>
+             <p className="font-medium text-gray-900 text-lg">{job.vehicle.name} <span className="text-gray-500 text-sm">({job.vehicle.year || "N/A"})</span></p>
+           </div>
+        </div>
 
-      <form action={submitTechConfiguration} className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 space-y-6">
-        <input type="hidden" name="jobId" value={jobId} />
-        <input type="hidden" name="clientId" value={job.vehicle.client.id} />
-        <input type="hidden" name="vehicleId" value={job.vehicle.id} />
+        {/* Verification Form */}
+        <form action={verifyAndSaveJob} className="p-6 space-y-6">
+           <div className="bg-orange-50 text-orange-800 p-4 rounded-xl text-sm flex items-start gap-3">
+              <ShieldCheck size={24} className="shrink-0 mt-0.5 text-orange-600" />
+              <p>Please confirm the device is reporting online on the tracking server. You can correct any typos in the Plate Number, IMEI, or SIM below before approving.</p>
+           </div>
 
-        {/* 0. MISSING DATA SECTION (Only shows if data is missing) */}
-        {(needsEmail || needsPlate || needsYear) && (
-          <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 space-y-4">
-             <h3 className="text-sm font-bold text-orange-800 uppercase flex items-center gap-2">
-               <AlertTriangle size={16}/> Missing Required Info
-             </h3>
-             <p className="text-xs text-orange-700">Please complete the client record before finalizing configuration.</p>
-             
-             {needsEmail && (
-               <div>
-                 <label className="block text-xs font-bold text-gray-700 mb-1">Client Email (Compulsory)</label>
-                 <div className="relative">
-                   <Mail className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                   <input name="clientEmail" type="email" required placeholder="client@email.com" className="w-full pl-10 p-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" />
-                 </div>
-               </div>
-             )}
-
-             <div className="grid grid-cols-2 gap-4">
-               {needsPlate && (
-                 <div>
-                   <label className="block text-xs font-bold text-gray-700 mb-1">Plate Number</label>
-                   <div className="relative">
-                     <Hash className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                     <input name="vehiclePlate" placeholder="ABC-123-XY" className="w-full pl-10 p-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" />
-                   </div>
-                 </div>
-               )}
-               {needsYear && (
-                 <div>
-                   <label className="block text-xs font-bold text-gray-700 mb-1">Vehicle Year</label>
-                   <div className="relative">
-                     <Calendar className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                     <input name="vehicleYear" placeholder="2015" className="w-full pl-10 p-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" />
-                   </div>
-                 </div>
-               )}
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             {/* Added Plate Number Field */}
+             <div>
+               <label className="block text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
+                 <Hash size={14}/> Plate / Chassis
+               </label>
+               <input 
+                 name="plateNumber" 
+                 defaultValue={job.vehicle.plateNumber || ""} 
+                 required 
+                 className="w-full p-4 border rounded-xl font-mono text-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition" 
+               />
              </div>
-          </div>
-        )}
 
-        {/* 1. Device Info (Existing inputs) */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-gray-900 uppercase border-b pb-2">Tracker Details</h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">IMEI Number</label>
-            <input name="imei" required placeholder="Enter 15-digit IMEI" className="input-field w-full p-2 border rounded-lg" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sim Number</label>
-            <input name="simNumber" required placeholder="Tracker Sim Number" className="input-field w-full p-2 border rounded-lg" />
-          </div>
-          <div>
-             <label className="block text-sm font-medium text-gray-700 mb-1">Platform ID (GPS ID)</label>
-             <input name="platformId" placeholder="ID shown on Tracking Map" className="input-field w-full p-2 border rounded-lg" />
-          </div>
-        </div>
+             <div>
+               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tracker IMEI</label>
+               <input 
+                 name="imei" 
+                 defaultValue={job.device?.imei} 
+                 required 
+                 className="w-full p-4 border rounded-xl font-mono text-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition" 
+               />
+             </div>
+             
+             <div>
+               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sim Number</label>
+               <input 
+                 name="simNumber" 
+                 defaultValue={job.simCard?.simNumber} 
+                 required 
+                 className="w-full p-4 border rounded-xl font-mono text-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition" 
+               />
+             </div>
+           </div>
 
-        {/* 2. Job Info */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-gray-900 uppercase border-b pb-2 flex items-center gap-2">
-            <UserCheck size={16} /> Job Attribution
-          </h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Installer Name</label>
-            <input name="installerName" required placeholder="e.g. Emeka" className="input-field w-full p-2 border rounded-lg" />
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="pt-6 flex gap-4 border-t">
-           <Link href="/dashboard/tech" className="px-6 py-3 border rounded-xl hover:bg-gray-50 text-gray-600 font-medium">Cancel</Link>
-           <SubmitButton 
-      className="flex-1 bg-[#84c47c] text-white py-3 rounded-xl font-bold hover:bg-[#6aa663] shadow-lg"
-      loadingText="Saving Configuration..."
-   >
-     <Save size={18} />
-     Save & Send to Activation
-   </SubmitButton>
-        </div>
-      </form>
+           <div className="pt-4 mt-6">
+             <SubmitButton className="w-full bg-[#84c47c] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#6aa663] shadow-lg flex justify-center items-center gap-2">
+               <CheckCircle size={24} /> Approve & Send to Onboarding
+             </SubmitButton>
+           </div>
+        </form>
+      </div>
     </div>
-  );
+  )
 }

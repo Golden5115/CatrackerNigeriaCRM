@@ -3,28 +3,51 @@
 import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, Users, Server, 
-  Smartphone, CreditCard, Shield, Briefcase, LogOut 
+  Smartphone, CreditCard, Shield, Briefcase, LogOut, Package 
 } from "lucide-react";
 import Logo from "./Logo";
 import SearchInput from "./SearchInput";
 import { logout } from "@/app/actions/auth";
 import LoadingLink from "@/components/LoadingLink";
 
-const menuItems = [
-  { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Sales Pipeline", href: "/dashboard/leads", icon: Users },
-  { name: "Tech Support", href: "/dashboard/tech", icon: Server },
-  { name: "Client Onboarding", href: "/dashboard/activation", icon: Smartphone },
-  { name: "Client Database", href: "/dashboard/clients", icon: Briefcase },
-  { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
-  { name: "Team & Roles", href: "/dashboard/users", icon: Shield },
+// We added "requiredModule" and "adminOnly" rules to the list
+const allMenuItems = [
+  { name: "Overview", href: "/dashboard", icon: LayoutDashboard, requiredModule: null }, 
+  { name: "Sales Pipeline", href: "/dashboard/leads", icon: Users, requiredModule: "/dashboard/leads" },
+  { name: "Inventory", href: "/dashboard/inventory", icon: Package, requiredModule: "/dashboard/inventory" },
+  { name: "Tech Support", href: "/dashboard/tech", icon: Server, requiredModule: "/dashboard/tech" },
+  { name: "Client Onboarding", href: "/dashboard/activation", icon: Smartphone, requiredModule: "/dashboard/activation" },
+  { name: "Client Database", href: "/dashboard/clients", icon: Briefcase, requiredModule: "/dashboard/clients" },
+  { name: "Payments", href: "/dashboard/payments", icon: CreditCard, requiredModule: "/dashboard/payments" },
+  { name: "Team & Roles", href: "/dashboard/users", icon: Shield, adminOnly: true }, 
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ 
+  userRole = 'STAFF', 
+  accessibleModules = [] 
+}: { 
+  userRole?: string, 
+  accessibleModules?: string[] 
+}) {
   const pathname = usePathname();
 
+  // The Magic Filter: Decides what buttons to show
+  const filteredMenu = allMenuItems.filter(item => {
+    // 1. Admins see absolutely everything
+    if (userRole === 'ADMIN') return true;
+    
+    // 2. Hide Admin-only pages (like Team & Roles) from regular staff
+    if (item.adminOnly) return false;
+    
+    // 3. Everyone is allowed to see the Overview Home Page
+    if (!item.requiredModule) return true;
+    
+    // 4. For everything else, check if you checked their module box in the DB
+    return accessibleModules.includes(item.requiredModule);
+  });
+
   return (
-    <div className="flex h-screen flex-col justify-between border-r bg-[#2d4a2a] text-white w-64 shadow-2xl">
+    <div className="flex h-screen flex-col justify-between border-r bg-[#2d4a2a] text-white w-64 shadow-2xl shrink-0">
       <div className="px-4 py-8">
         <div className="mb-8 pl-2">
            <Logo textClassName="text-white" />
@@ -33,7 +56,7 @@ export default function Sidebar() {
         <SearchInput />
         
         <nav className="flex flex-col gap-1 mt-6">
-          {menuItems.map((item) => {
+          {filteredMenu.map((item) => {
             const isActive = pathname === item.href;
             return (
               <LoadingLink

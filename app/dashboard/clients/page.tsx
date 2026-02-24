@@ -34,7 +34,8 @@ export default async function ClientsPage({
           jobs: {
             some: {
               status: { 
-                in: ['INSTALLED', 'CONFIGURED', 'ACTIVE', 'PAYMENT_PENDING', 'COMPLETED'] 
+                // 👇 FIX: Updated to match the new schema JobStatus enum
+                in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE'] 
               }
             }
           }
@@ -79,7 +80,6 @@ export default async function ClientsPage({
                 
                 // --- FINANCIAL CALCULATION ---
                 const totalPaid = client.vehicles.reduce((sum, v) => {
-                  // Ensure we treat amountPaid as a Number
                   return sum + (v.jobs[0]?.amountPaid ? Number(v.jobs[0].amountPaid) : 0);
                 }, 0);
 
@@ -98,8 +98,9 @@ export default async function ClientsPage({
                   v.jobs.some(j => j.status === 'ACTIVE' && j.paymentStatus !== 'PAID')
                 ).length;
 
+                // 👇 FIX: Updated from 'INSTALLED' to 'PENDING_QC'
                 const techQueueCount = client.vehicles.filter(v => 
-                  v.jobs.some(j => j.status === 'INSTALLED')
+                  v.jobs.some(j => j.status === 'PENDING_QC')
                 ).length;
 
                 const onboardingCount = client.vehicles.filter(v => 

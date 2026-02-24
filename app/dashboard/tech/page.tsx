@@ -7,9 +7,11 @@ export const dynamic = 'force-dynamic';
 export default async function TechSupportPage() {
   // Fetch jobs waiting for Tech Configuration (Status: INSTALLED)
   const jobs = await prisma.job.findMany({
-    where: { status: 'INSTALLED' },
+    where: { status: 'PENDING_QC' },
     include: {
-      vehicle: { include: { client: true } }
+      vehicle: { include: { client: true } },
+      device: true,   
+      simCard: true
     }
   });
 

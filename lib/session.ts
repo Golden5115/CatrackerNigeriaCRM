@@ -24,10 +24,16 @@ export async function createSession(userId: string, role: string) {
   })
 }
 
-// 2. VERIFY SESSION (Middleware check)
-export async function verifySession(session: string | undefined = '') {
+// 2. VERIFY SESSION (Middleware & Action check)
+// 👇 UPDATED: Automatically grabs the cookie if no token is passed
+export async function verifySession(token?: string) {
   try {
-    const { payload } = await jwtVerify(session, encodedKey, {
+    const cookieStore = await cookies()
+    const sessionToken = token || cookieStore.get('session')?.value
+
+    if (!sessionToken) return null
+
+    const { payload } = await jwtVerify(sessionToken, encodedKey, {
       algorithms: ['HS256'],
     })
     return payload

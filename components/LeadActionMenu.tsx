@@ -1,112 +1,187 @@
 'use client'
 
 import { useState } from "react"
-import { updateLeadStatus } from "@/app/actions/updateLead"
-import { Calendar, CheckCircle, XCircle, AlertTriangle, Wrench } from "lucide-react"
+import { claimJob, submitInstallation, unclaimJob } from "@/app/actions/installer"
+import { MoreVertical, CheckCircle, Lock, Wrench, X, Loader2, RotateCcw } from "lucide-react"
 import SubmitButton from "@/components/SubmitButton"
+import InventorySearch from "./InventorySearch"
 
 interface LeadActionMenuProps {
-  jobId: string;
-  currentStatus: string;
-  scheduleDate?: Date | null;
+  jobId: string
+  currentStatus: string
+  installerId?: string | null
+  currentUserId: string 
+  vehicleName?: string
+  installerName?: string | null
+  currentUserRole?: string 
 }
 
-export default function LeadActionMenu({ jobId, currentStatus, scheduleDate }: LeadActionMenuProps) {
-  const [mode, setMode] = useState<'VIEW' | 'LOST' | 'SCHEDULE'>('VIEW')
+export default function LeadActionMenu({ 
+  jobId, currentStatus, installerId, currentUserId, vehicleName, installerName, currentUserRole 
+}: LeadActionMenuProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [showInstallModal, setShowInstallModal] = useState(false)
+  const [isClaiming, setIsClaiming] = useState(false)
+  const [isUnclaiming, setIsUnclaiming] = useState(false)
 
-  // 1. DEFAULT VIEW (The Buttons)
-  if (mode === 'VIEW') {
+  // 1. HANDLE CLAIMING
+  const handleClaim = async () => {
+    setIsClaiming(true)
+    try {
+      const res = await claimJob(jobId)
+      if (res?.error) alert("Error: " + res.error)
+    } catch (err) {
+      alert("A critical system error occurred.")
+    }
+    setIsClaiming(false)
+    setIsOpen(false)
+  }
+
+  // 2. HANDLE UNCLAIMING
+  const handleUnclaim = async () => {
+    if (!confirm("Are you sure you want to return this job to the pool?")) return;
+    
+    setIsUnclaiming(true)
+    try {
+      const res = await unclaimJob(jobId)
+      if (res?.error) alert("Error: " + res.error)
+    } catch (err) {
+      alert("A critical system error occurred.")
+    }
+    setIsUnclaiming(false)
+    setIsOpen(false)
+  }
+
+  // 3. LOCK LOGIC
+  const isAdmin = currentUserRole === 'ADMIN'
+  const isMyJob = installerId === currentUserId
+  const isLocked = currentStatus === 'IN_PROGRESS' && !isMyJob && !isAdmin
+
+  // 4. RENDER LOCKED STATE
+  if (isLocked) {
     return (
-      <div className="flex flex-col gap-2 items-end">
-        
-        {/* SCHEDULE BUTTON (Toggle) */}
-        <button 
-          onClick={() => setMode('SCHEDULE')}
-          className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 flex items-center gap-2 w-fit"
-        >
-          <Calendar size={14} /> 
-          {currentStatus === 'SCHEDULED' && scheduleDate 
-            ? new Date(scheduleDate).toLocaleDateString() 
-            : 'Schedule Date'}
-        </button>
-
-        <div className="flex gap-2">
-           {/* REJECT BUTTON (Toggle) */}
-           <button 
-            onClick={() => setMode('LOST')}
-            className="text-gray-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition"
-            title="Mark as Lost"
-          >
-            <XCircle size={20} />
-          </button>
-
-          {/* INSTALL DONE BUTTON (Action) */}
-          <form action={updateLeadStatus}>
-            <input type="hidden" name="jobId" value={jobId} />
-            <input type="hidden" name="actionType" value="INSTALLED" />
-            <SubmitButton 
-              className="bg-green-600 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-green-700 flex items-center gap-1.5 shadow-sm"
-              loadingText="Done"
-            >
-              <CheckCircle size={14} />
-              Done
-            </SubmitButton>
-          </form>
+      <div className="flex flex-col items-end text-gray-400 text-xs italic">
+        <div className="flex items-center gap-1">
+           <Lock size={12} />
+           <span>Taken</span>
         </div>
+        {installerName && <span className="text-[10px]">by {installerName}</span>}
       </div>
     )
   }
 
-  // 2. LEAD LOST FORM
-  if (mode === 'LOST') {
-    return (
-      <form action={updateLeadStatus} className="flex flex-col gap-2 bg-red-50 p-3 rounded-lg border border-red-100 min-w-[200px]">
-        <input type="hidden" name="jobId" value={jobId} />
-        <input type="hidden" name="actionType" value="LEAD_LOST" />
-        
-        <label className="text-xs font-bold text-red-800 flex items-center gap-1">
-          <AlertTriangle size={12} /> Reason for loss:
-        </label>
-        <select name="lostReason" required className="text-xs p-1 rounded border-red-200">
-           <option value="Price too high">Price too high</option>
-           <option value="Client unresponsive">Client unresponsive</option>
-           <option value="Competitor">Went with Competitor</option>
-           <option value="Cancelled">Client Cancelled</option>
-        </select>
-        
-        <div className="flex gap-2 items-center mt-1">
-          <button type="button" onClick={() => setMode('VIEW')} className="text-xs text-gray-500 underline">Cancel</button>
-          <SubmitButton 
-            className="bg-red-600 text-white text-xs px-2 py-1 rounded font-bold ml-auto"
-            loadingText="..."
-          >
-            Confirm Lost
-          </SubmitButton>
-        </div>
-      </form>
-    )
-  }
+  return (
+    <div className={`relative ${isOpen ? 'z-50' : 'z-10'}`}>
+      
+      {/* TRIGGER BUTTON */}
+      <button onClick={() => setIsOpen(!isOpen)} className="p-2 hover:bg-gray-100 rounded-full transition">
+        <MoreVertical size={16} className="text-gray-500" />
+      </button>
 
-  // 3. SCHEDULE FORM
-  if (mode === 'SCHEDULE') {
-    return (
-      <form action={updateLeadStatus} className="flex flex-col gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100 min-w-[200px]">
-        <input type="hidden" name="jobId" value={jobId} />
-        <input type="hidden" name="actionType" value="SCHEDULED" />
-        
-        <label className="text-xs font-bold text-blue-800">Set Install Date:</label>
-        <input type="date" name="scheduleDate" required className="text-xs p-1 rounded border-blue-200" />
-        
-        <div className="flex gap-2 items-center mt-1">
-          <button type="button" onClick={() => setMode('VIEW')} className="text-xs text-gray-500 underline">Cancel</button>
-          <SubmitButton 
-            className="bg-blue-600 text-white text-xs px-2 py-1 rounded font-bold ml-auto"
-            loadingText="..."
-          >
-            Save Date
-          </SubmitButton>
+      {/* DROPDOWN MENU */}
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
+          
+          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border z-20 overflow-hidden">
+            
+            {/* OPTION A: CLAIM JOB */}
+            {(currentStatus === 'NEW_LEAD' || currentStatus === 'SCHEDULED') && (
+               <button 
+                 onClick={handleClaim}
+                 disabled={isClaiming}
+                 className="w-full text-left px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-bold"
+               >
+                 {isClaiming ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle size={16} />}
+                 Claim & Start Job
+               </button>
+            )}
+
+            {/* OPTION B: FINISH JOB & UNCLAIM */}
+            {currentStatus === 'IN_PROGRESS' && isMyJob && (
+               <>
+                 <button 
+                   onClick={() => { setShowInstallModal(true); setIsOpen(false); }}
+                   className="w-full text-left px-4 py-3 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2 font-bold border-b border-gray-50"
+                 >
+                   <Wrench size={16} />
+                   Finish Installation
+                 </button>
+
+                 <button 
+                   onClick={handleUnclaim}
+                   disabled={isUnclaiming}
+                   className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-bold"
+                 >
+                   {isUnclaiming ? <Loader2 className="animate-spin" size={16}/> : <RotateCcw size={16} />}
+                   Return Job to Pool
+                 </button>
+               </>
+            )}
+
+            {/* OPTION C: ADMIN OVERRIDE */}
+            {currentStatus === 'IN_PROGRESS' && isAdmin && !isMyJob && (
+               <button 
+                 onClick={handleUnclaim}
+                 disabled={isUnclaiming}
+                 className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-bold bg-red-50/50"
+               >
+                 {isUnclaiming ? <Loader2 className="animate-spin" size={16}/> : <RotateCcw size={16} />}
+                 Admin: Return to Pool
+               </button>
+            )}
+
+          </div>
+        </>
+      )}
+
+      {/* --- INSTALLATION MODAL --- */}
+      {showInstallModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="text-xl font-bold text-gray-800">Complete Installation</h3>
+               <button onClick={() => setShowInstallModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+            </div>
+
+            <form action={async (formData) => {
+                await submitInstallation(formData);
+                setShowInstallModal(false);
+            }} className="space-y-4">
+               
+               <input type="hidden" name="jobId" value={jobId} />
+               
+               <div>
+                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Vehicle Name</label>
+                 <input name="vehicleName" defaultValue={vehicleName} required className="w-full p-3 border rounded-xl bg-gray-50" />
+               </div>
+
+               <div>
+                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Plate / Chassis Number</label>
+                 <input name="plateNumber" placeholder="ABC-123-XY" required className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition" />
+               </div>
+
+               <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Select Tracker Hardware</label>
+                 <InventorySearch type="DEVICE" name="deviceId" />
+               </div>
+
+               <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Select Tracker Sim</label>
+                 <InventorySearch type="SIM" name="simCardId" />
+               </div>
+
+               <div className="pt-2">
+                 <SubmitButton className="w-full bg-[#84c47c] text-white py-3 rounded-xl font-bold hover:bg-[#6aa663] transition">
+                   Submit & Mark Done
+                 </SubmitButton>
+               </div>
+
+            </form>
+          </div>
         </div>
-      </form>
-    )
-  }
+      )}
+
+    </div>
+  )
 }

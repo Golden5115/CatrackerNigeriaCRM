@@ -5,19 +5,21 @@ import {
   MapPin, Hash, CheckCircle 
 } from "lucide-react";
 
-
-
 export default async function ClientDetailsPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
 
-  // Fetch everything: Client -> Vehicle -> Job -> Device
+  // 👇 FIX 1: Updated the database query to include simCard and installer
   const client = await prisma.client.findUnique({
     where: { id: clientId },
     include: {
       vehicles: {
         include: {
           jobs: {
-            include: { device: true } 
+            include: { 
+              device: true,
+              simCard: true,  // <--- Added this
+              installer: true // <--- Added this
+            } 
           }
         }
       },
@@ -59,13 +61,14 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
       {/* 2. VEHICLE FLEET CARDS */}
       <div>
         <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <Car className="text-brand-600" /> Vehicle Fleet & Configuration
+          <Car className="text-[#2d4a2a]" /> Vehicle Fleet & Configuration
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            {client.vehicles.map((vehicle) => {
               const job = vehicle.jobs[0];
               const device = job?.device;
+              const simCard = job?.simCard; // <--- Extract SimCard
               const configDate = job?.configurationDate ? new Date(job.configurationDate).toLocaleDateString() : "Pending";
               const paidAmount = job?.amountPaid ? Number(job.amountPaid) : 0;
 
@@ -76,11 +79,11 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                   <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                     <div>
                       <h3 className="font-bold text-lg text-gray-800">{vehicle.name}</h3>
-                      <p className="text-xs text-gray-500 font-medium">Year: {vehicle.year}</p>
+                      <p className="text-xs text-gray-500 font-medium">Year: {vehicle.year || "N/A"}</p>
                     </div>
                     <div className="text-right">
                       <span className="block font-mono text-xs font-bold bg-white border px-2 py-1 rounded text-gray-700">
-                        {vehicle.plateNumber}
+                        {vehicle.plateNumber || "NO PLATE"}
                       </span>
                     </div>
                   </div>
@@ -99,7 +102,8 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                         </div>
                         <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
                           <span className="text-purple-600 text-xs block mb-1">Sim Number</span>
-                          <div className="font-mono font-bold text-gray-800">{device?.simNumber || "---"}</div>
+                          {/* 👇 FIX 2: Pull sim number from the simCard object */}
+                          <div className="font-mono font-bold text-gray-800">{simCard?.simNumber || "---"}</div>
                         </div>
                       </div>
 
@@ -108,8 +112,9 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                         <span className="font-medium text-gray-900">{configDate}</span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500 flex items-center gap-2"><User size={14}/> Configured By:</span>
-                        <span className="font-medium text-gray-900">{job?.installerName || "Unassigned"}</span>
+                        {/* 👇 FIX 3: Pull the real user name from the installer relationship */}
+                        <span className="text-gray-500 flex items-center gap-2"><User size={14}/> Installed By:</span>
+                        <span className="font-medium text-gray-900">{job?.installer?.fullName || "System Admin"}</span>
                       </div>
                     </div>
 
@@ -121,7 +126,7 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                       
                       <div className="flex justify-between items-center bg-green-50 p-4 rounded-lg border border-green-100">
                         <div className="flex items-center gap-3">
-                           <div className="bg-green-200 p-2 rounded-full text-green-700">
+                           <div className="bg-[#e0f2de] p-2 rounded-full text-[#2d4a2a]">
                              <CreditCard size={18} />
                            </div>
                            <div>
@@ -129,7 +134,7 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                              <p className="text-xs text-green-600">Collector: {job?.paymentCollector || "System"}</p>
                            </div>
                         </div>
-                        <div className="text-xl font-bold text-green-700">
+                        <div className="text-xl font-bold text-[#2d4a2a]">
                           ₦{paidAmount.toLocaleString()}
                         </div>
                       </div>

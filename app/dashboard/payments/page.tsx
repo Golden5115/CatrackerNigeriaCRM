@@ -3,13 +3,15 @@ import { Phone, CheckCircle, AlertCircle } from "lucide-react";
 import { markPaymentAsDone } from "@/app/actions/markPayment";
 import SubmitButton from "@/components/SubmitButton";
 
+// Ensure page always fetches fresh data
 export const dynamic = 'force-dynamic';
 
 export default async function PaymentsPage() {
   const jobs = await prisma.job.findMany({
     where: { 
       paymentStatus: { not: 'PAID' },
-      status: { in: ['INSTALLED', 'CONFIGURED', 'ACTIVE'] }
+      // 👇 FIX: Changed 'INSTALLED' to 'PENDING_QC' to match your new schema
+      status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE'] }
     },
     include: {
       vehicle: { include: { client: true } }
@@ -58,7 +60,7 @@ export default async function PaymentsPage() {
             <div className="flex items-center gap-4">
               <div className="text-right mr-4 hidden md:block">
                 <span className="block text-xs text-gray-400 uppercase">Service Status</span>
-                <span className="font-medium text-gray-700">{job.status}</span>
+                <span className="font-medium text-gray-700">{job.status.replace('_', ' ')}</span>
               </div>
 
               <form action={markPaymentAsDone} className="flex items-end gap-2">
