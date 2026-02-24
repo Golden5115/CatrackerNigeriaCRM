@@ -13,7 +13,8 @@ export default async function ActivationPage() {
     },
     include: {
       vehicle: { include: { client: true } },
-      device: true
+      device: true,
+      simCard: true // 👇 FIX 1: Include the simCard table
     }
   });
 
@@ -61,7 +62,8 @@ export default async function ActivationPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Sim Number:</span>
-                  <span className="font-mono text-gray-700">{job.device?.simNumber || "N/A"}</span>
+                  {/* 👇 FIX 2: Point this to the simCard object instead of device */}
+                  <span className="font-mono text-gray-700">{job.simCard?.simNumber || "N/A"}</span>
                 </div>
               </div>
             </div>
