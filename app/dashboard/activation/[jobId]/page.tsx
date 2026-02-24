@@ -7,15 +7,17 @@ import SubmitButton from "@/components/SubmitButton";
 export default async function ActivationDetailsPage({ params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
 
+  // 👇 FIX 1: Tell Prisma to include the simCard data
   const job = await prisma.job.findUnique({
     where: { id: jobId },
     include: {
       vehicle: { include: { client: true } },
-      device: true
+      device: true,
+      simCard: true 
     }
   });
 
-  if (!job) return <div>Job not found</div>;
+  if (!job) return <div className="p-8">Job not found</div>;
 
   return (
     <div className="max-w-2xl mx-auto py-8">
@@ -35,7 +37,8 @@ export default async function ActivationDetailsPage({ params }: { params: Promis
             <span>IMEI:</span> <span className="font-mono font-bold select-all">{job.device?.imei}</span>
           </div>
           <div className="flex justify-between">
-            <span>Sim:</span> <span className="font-mono font-bold select-all">{job.device?.simNumber}</span>
+            {/* 👇 FIX 2: Look inside job.simCard instead of job.device */}
+            <span>Sim:</span> <span className="font-mono font-bold select-all">{job.simCard?.simNumber}</span>
           </div>
           <div className="flex justify-between">
              <span>Plate:</span> <span className="font-mono font-bold select-all">{job.vehicle.plateNumber}</span>
@@ -47,29 +50,29 @@ export default async function ActivationDetailsPage({ params }: { params: Promis
 
           <div>
              <label className="block text-sm font-medium text-gray-700 mb-1">Generated Username (Optional)</label>
-             <input name="username" placeholder="e.g. client_name01" className="w-full border border-gray-300 rounded-lg p-2" />
+             <input name="username" placeholder="e.g. client_name01" className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 outline-none" />
              <p className="text-xs text-gray-500 mt-1">Record the username created on the tracking platform.</p>
           </div>
 
           <div>
              <label className="block text-sm font-medium text-gray-700 mb-1">Generated Password (Optional)</label>
-             <input name="password" placeholder="e.g. Track2024!" className="w-full border border-gray-300 rounded-lg p-2" />
+             <input name="password" placeholder="e.g. Track2024!" className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 outline-none" />
           </div>
 
           <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
-             <input type="checkbox" required id="confirm" className="mt-1 w-4 h-4 text-green-600 rounded" />
-             <label htmlFor="confirm" className="text-sm text-gray-600">
+             <input type="checkbox" required id="confirm" className="mt-1 w-4 h-4 text-green-600 rounded cursor-pointer" />
+             <label htmlFor="confirm" className="text-sm text-gray-600 cursor-pointer">
                I confirm that I have created the account on the tracking server and sent the login credentials to the client via SMS/WhatsApp/Email.
              </label>
           </div>
 
           <div className="pt-2 flex gap-4">
-             <Link href="/dashboard/activation" className="px-6 py-3 border rounded-xl hover:bg-gray-50 text-gray-600 font-medium">
+             <Link href="/dashboard/activation" className="px-6 py-3 border rounded-xl hover:bg-gray-50 text-gray-600 font-medium transition">
                Cancel
              </Link>
              
              <SubmitButton 
-               className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg text-lg"
+               className="flex-1 bg-[#84c47c] text-white py-3 rounded-xl font-bold hover:bg-[#6aa663] transition shadow-lg text-lg flex items-center justify-center gap-2"
                loadingText="Activating..."
              >
                <Send size={18} />
