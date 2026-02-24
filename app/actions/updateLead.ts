@@ -3,8 +3,6 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from 'next/cache'
 
-
-
 export async function updateLeadStatus(formData: FormData) {
   const jobId = formData.get('jobId') as string
   const actionType = formData.get('actionType') as string
@@ -13,7 +11,8 @@ export async function updateLeadStatus(formData: FormData) {
   if (actionType === 'INSTALLED') {
     await prisma.job.update({
       where: { id: jobId },
-      data: { status: 'INSTALLED' }
+      // 👇 FIX: Use the new PENDING_QC status instead of INSTALLED
+      data: { status: 'PENDING_QC' } 
     })
   }
 
