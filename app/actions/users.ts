@@ -2,15 +2,14 @@
 
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
-// If you use bcrypt for passwords, import it here: import bcrypt from 'bcryptjs'
+import * as bcrypt from 'bcryptjs' // 👇 FIX 1: Import bcrypt
 
 export async function createUser(formData: FormData) {
   const fullName = formData.get('fullName') as string
   const email = formData.get('email') as string
   const password = formData.get('password') as string 
-  const role = formData.get('role') as any // "ADMIN", "CSR", "INSTALLER", "TECH_SUPPORT"
+  const role = formData.get('role') as any 
   
-  // This grabs all the checkboxes the Admin ticked
   const accessibleModules = formData.getAll('modules') as string[]
 
   if (!email || !password || !fullName) {
@@ -18,14 +17,14 @@ export async function createUser(formData: FormData) {
   }
 
   try {
-    // SECURITY NOTE: In a live production app, you should hash this password before saving!
-    // const hashedPassword = await bcrypt.hash(password, 10)
+    // 👇 FIX 2: Hash the password securely before saving it
+    const hashedPassword = await bcrypt.hash(password, 10)
 
     await prisma.user.create({
       data: {
         fullName,
         email,
-        password, // Save hashedPassword here if using bcrypt
+        password: hashedPassword, // 👇 FIX 3: Save the hashed version, not the plain text
         role,
         accessibleModules
       }
