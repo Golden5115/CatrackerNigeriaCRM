@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import { 
   Car, AlertCircle, CheckCircle, MailWarning, 
-  Wrench, Pencil, Trash2, Smartphone 
+  Wrench, Pencil, Trash2, Smartphone, 
+  XCircle
 } from "lucide-react";
 import DeleteClientButton from "@/components/DeleteClientButton";
 import SortControl from "@/components/SortControl"; 
@@ -35,7 +36,7 @@ export default async function ClientsPage({
             some: {
               status: { 
                 // 👇 FIX: Updated to match the new schema JobStatus enum
-                in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE'] 
+                in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE', 'LEAD_LOST'] 
               }
             }
           }
@@ -109,6 +110,10 @@ export default async function ClientsPage({
 
                 const isAllClear = unpaidCount === 0 && techQueueCount === 0 && onboardingCount === 0;
 
+                // Determine if this is purely a lost prospect (no active/pending jobs, just lost)
+                const isLostProspect = client.vehicles.every(v => v.jobs.every(j => j.status === 'LEAD_LOST'));
+
+
                 return (
                   <tr key={client.id} className="hover:bg-gray-50 group transition">
                     
@@ -167,6 +172,11 @@ export default async function ClientsPage({
                         {isAllClear && (
                           <span className="inline-flex items-center gap-1 text-green-600 text-xs font-medium">
                             <CheckCircle size={12} /> All Clear
+                          </span>
+                        )}
+                        {isLostProspect && (
+                          <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-[10px] font-bold uppercase border border-gray-200">
+                            <XCircle size={10} /> Lost Prospect
                           </span>
                         )}
                       </div>

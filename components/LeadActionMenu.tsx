@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from "react"
-import { claimJob, submitInstallation, unclaimJob } from "@/app/actions/installer"
+import { claimJob, submitInstallation, unclaimJob, markJobAsLost } from "@/app/actions/installer"
 import { processHardwareSwap, resolveMaintenanceJob } from "@/app/actions/support"
-import { MoreVertical, CheckCircle, Lock, Wrench, X, Loader2, RotateCcw, AlertTriangle } from "lucide-react"
+import { MoreVertical, CheckCircle, Lock, Wrench, X, Loader2, RotateCcw, AlertTriangle, XCircle } from "lucide-react"
 import SubmitButton from "@/components/SubmitButton"
 import InventorySearch from "./InventorySearch"
+
 
 interface LeadActionMenuProps {
   jobId: string
@@ -25,6 +26,7 @@ export default function LeadActionMenu({
   const [isOpen, setIsOpen] = useState(false)
   const [showInstallModal, setShowInstallModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
+  const [showLostModal, setShowLostModal] = useState(false)
   const [resolutionType, setResolutionType] = useState<'WIRING' | 'DEVICE' | 'SIM'>('WIRING')
   const [isClaiming, setIsClaiming] = useState(false)
   const [isUnclaiming, setIsUnclaiming] = useState(false)
@@ -62,6 +64,10 @@ export default function LeadActionMenu({
   const isMyJob = installerId === currentUserId
   const isLocked = currentStatus === 'IN_PROGRESS' && !isMyJob && !isAdmin
 
+  if (currentStatus === 'LEAD_LOST') {
+    return null; // Don't show the 3 dots at all if it's already dead
+  }
+
   if (isLocked) {
     return (
       <div className="flex flex-col items-end text-gray-400 text-xs italic">
@@ -89,11 +95,18 @@ export default function LeadActionMenu({
           
           <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border z-20 overflow-hidden">
             
-            {(currentStatus === 'NEW_LEAD' || currentStatus === 'SCHEDULED') && (
-               <button onClick={handleClaim} disabled={isClaiming} className="w-full text-left px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-bold">
-                 {isClaiming ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle size={16} />}
-                 Claim & Start Job
-               </button>
+           {(currentStatus === 'NEW_LEAD' || currentStatus === 'SCHEDULED') && (
+               <>
+                 <button onClick={handleClaim} disabled={isClaiming} className="w-full text-left px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-bold border-b border-gray-50">
+                   {isClaiming ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle size={16} />}
+                   Claim & Start Job
+                 </button>
+                 
+                 {/* 👇 NEW BUTTON: Mark as Lost */}
+                 <button onClick={() => { setShowLostModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 font-bold">
+                   <XCircle size={16} /> Mark as Lost
+                 </button>
+               </>
             )}
 
             {currentStatus === 'IN_PROGRESS' && isMyJob && (
@@ -227,6 +240,45 @@ export default function LeadActionMenu({
                  </SubmitButton>
                </div>
 
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- 3. MARK AS LOST MODAL --- */}
+      {showLostModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                 <XCircle className="text-gray-500" /> Mark Lead as Lost
+               </h3>
+               <button onClick={() => setShowLostModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+            </div>
+
+            <form action={async (formData) => {
+                await markJobAsLost(formData);
+                setShowLostModal(false);
+            }} className="space-y-4">
+               <input type="hidden" name="jobId" value={jobId} />
+               
+               <div>
+                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Reason for losing lead</label>
+                 <select name="lostReason" required className="w-full p-3 border rounded-xl bg-gray-50 outline-none font-medium text-gray-700">
+                   <option value="">Select a reason...</option>
+                   <option value="Too Expensive">Too Expensive</option>
+                   <option value="Went with Competitor">Went with Competitor</option>
+                   <option value="Client Stopped Responding">Client Stopped Responding (Ghosted)</option>
+                   <option value="Not Interested Anymore">Not Interested Anymore</option>
+                   <option value="Other">Other</option>
+                 </select>
+               </div>
+
+               <div className="pt-4">
+                 <SubmitButton className="w-full bg-gray-800 text-white py-3 rounded-xl font-bold hover:bg-gray-900 transition">
+                   Confirm Lost Lead
+                 </SubmitButton>
+               </div>
             </form>
           </div>
         </div>

@@ -102,3 +102,28 @@ export async function submitInstallation(formData: FormData) {
     return { error: "System Error. The items might have already been used." }
   }
 }
+
+
+export async function markJobAsLost(formData: FormData) {
+  const jobId = formData.get('jobId') as string
+  const lostReason = formData.get('lostReason') as string
+
+  try {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { 
+        status: 'LEAD_LOST',
+        lostReason: lostReason 
+      }
+    })
+    
+    // We import revalidatePath from next/cache at the top of the file if not there already
+    const { revalidatePath } = await import('next/cache')
+    revalidatePath('/dashboard/leads')
+    revalidatePath('/dashboard/clients')
+    
+    return { success: true }
+  } catch (error) {
+    return { error: "Failed to mark lead as lost." }
+  }
+}

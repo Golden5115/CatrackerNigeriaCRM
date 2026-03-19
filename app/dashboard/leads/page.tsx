@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import { 
   Phone, Car, Plus, Clock, Calendar, Pencil, Hash, Wrench, 
-  AlertCircle
+  AlertCircle,
+  XCircle
 } from "lucide-react";
 import LeadActionMenu from "@/components/LeadActionMenu";
 import SortControl from "@/components/SortControl"; 
@@ -37,7 +38,7 @@ export default async function LeadsPage({
     where: {
       vehicles: {
         some: {
-          jobs: { some: { status: { in: ['NEW_LEAD', 'SCHEDULED', 'IN_PROGRESS'] } } }
+          jobs: { some: { status: { in: ['NEW_LEAD', 'SCHEDULED', 'IN_PROGRESS', 'LEAD_LOST'] } } }
         }
       }
     },
@@ -95,7 +96,7 @@ export default async function LeadsPage({
                 
                 // 1. FILTER: Get active vehicles (Including IN_PROGRESS)
                 const activeVehicles = client.vehicles.filter(v => 
-                  ['NEW_LEAD', 'SCHEDULED', 'IN_PROGRESS'].includes(v.jobs[0]?.status)
+                  ['NEW_LEAD', 'SCHEDULED', 'IN_PROGRESS', 'LEAD_LOST'].includes(v.jobs[0]?.status)
                 );
 
                 // 2. RENDER ROWS
@@ -163,6 +164,13 @@ export default async function LeadsPage({
                             {job.status === 'NEW_LEAD' && (
                               <span className="bg-blue-100 text-blue-800 text-[10px] px-2 py-1 rounded-full font-bold tracking-wider">NEW LEAD</span>
                             )}
+
+                            {/* 👇 NEW: Lost Lead Badge */}
+                            {job.status === 'LEAD_LOST' && (
+                              <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-full font-bold tracking-wider flex items-center gap-1">
+                                <XCircle size={10} /> LOST LEAD
+                              </span>
+                            )}
                             
                             {job.status === 'IN_PROGRESS' && (
                               <span className="flex items-center gap-1 bg-orange-100 text-orange-800 text-[10px] px-2 py-1 rounded-full font-bold tracking-wider">
@@ -187,6 +195,14 @@ export default async function LeadsPage({
                                 <AlertCircle size={12} /> Reported Issue:
                               </span>
                               {job.supportNotes}
+                            </div>
+                          )}
+
+                          {/* 👇 NEW: Show Lost Reason */}
+                          {job.status === 'LEAD_LOST' && job.lostReason && (
+                            <div className="mt-3 p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 shadow-sm max-w-sm">
+                              <span className="font-bold block mb-1">Reason Lost:</span>
+                              {job.lostReason}
                             </div>
                           )}
                         </div>

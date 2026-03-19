@@ -61,6 +61,7 @@ model User {
   fullName          String?
   role              Role          @default(CSR)
   accessibleModules String[]      @default([]) 
+  canEditDelete     Boolean   @default(false)
   status            AccountStatus @default(ACTIVE) 
   
   // HR Profile Fields
