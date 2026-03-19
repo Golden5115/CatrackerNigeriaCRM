@@ -5,6 +5,7 @@ import {
   Wrench, Pencil, Trash2, Smartphone, 
   XCircle
 } from "lucide-react";
+import { verifySession } from "@/lib/session"
 import DeleteClientButton from "@/components/DeleteClientButton";
 import SortControl from "@/components/SortControl"; 
 
@@ -17,6 +18,13 @@ export default async function ClientsPage({
 }) {
   const params = await searchParams;
   const sort = (params.sort as string) || 'date_desc';
+// 👇 NEW: Fetch Split Permissions
+  const session = await verifySession() 
+  const userId = typeof session?.userId === 'string' ? session.userId : "";
+  const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+  const isAdmin = currentUser?.role === 'ADMIN';
+  const canEdit = isAdmin || currentUser?.canEdit === true;
+  const canDelete = isAdmin || currentUser?.canDelete === true;
 
   // 1. Determine Sorting Logic
   let orderBy = {};
@@ -182,20 +190,24 @@ export default async function ClientsPage({
                       </div>
                     </td>
 
-                    {/* 6. Actions */}
+                 {/* 6. Actions */}
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end items-center gap-2">
-                        <Link 
-                          href={`/dashboard/clients/${client.id}/edit`}
-                          className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition"
-                        >
-                          <Pencil size={18} />
-                        </Link>
-                        <DeleteClientButton clientId={client.id} />
-                        <Link 
-                          href={`/dashboard/clients/${client.id}`}
-                          className="text-blue-600 hover:text-blue-900 font-medium text-sm border border-blue-200 px-3 py-1 rounded hover:bg-blue-50 ml-2"
-                        >
+                        
+                        {/* 👇 EDIT PERMISSION */}
+                        {canEdit && (
+                          <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition">
+                            <Pencil size={18} />
+                          </Link>
+                        )}
+
+                        {/* 👇 DELETE PERMISSION */}
+                        {canDelete && (
+                          <DeleteClientButton clientId={client.id} />
+                        )}
+
+                        {/* EVERYONE can view */}
+                        <Link href={`/dashboard/clients/${client.id}`} className="text-blue-600 hover:text-blue-900 font-medium text-sm border border-blue-200 px-3 py-1 rounded hover:bg-blue-50 ml-2">
                           View
                         </Link>
                       </div>

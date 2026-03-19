@@ -31,7 +31,7 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
 
-  return (
+return (
     <div className="flex h-screen flex-col justify-between border-r bg-[#2d4a2a] text-white w-64 shadow-2xl shrink-0">
       <div className="px-4 py-8">
         <div className="mb-8 pl-2">

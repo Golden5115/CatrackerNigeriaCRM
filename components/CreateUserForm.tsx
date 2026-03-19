@@ -121,6 +121,35 @@ export default function CreateUserForm() {
         </div>
       </div>
 
+      
+
+     {/* 👇 NEW: Split Permissions Block */}
+      <div className="pt-4 mt-6 border-t border-gray-100 space-y-3">
+        <label className="flex items-start gap-3 p-4 border rounded-xl bg-blue-50/30 cursor-pointer hover:bg-blue-50 transition border-blue-100">
+          <input 
+            type="checkbox" 
+            name="canEdit" 
+            className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
+          />
+          <div>
+            <p className="font-bold text-blue-900 text-sm">Grant Create & Edit Permissions</p>
+            <p className="text-xs text-blue-700 mt-1">Allows this user to add new leads, log support tickets, and edit client profiles.</p>
+          </div>
+        </label>
+
+        <label className="flex items-start gap-3 p-4 border rounded-xl bg-red-50/30 cursor-pointer hover:bg-red-50 transition border-red-100">
+          <input 
+            type="checkbox" 
+            name="canDelete" 
+            className="mt-1 w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500" 
+          />
+          <div>
+            <p className="font-bold text-red-900 text-sm">Grant Delete Permissions</p>
+            <p className="text-xs text-red-700 mt-1">Warning: Allows this user to permanently delete clients and wipe their history.</p>
+          </div>
+        </label>
+      </div>
+
       <SubmitButton className="w-full bg-[#84c47c] text-white py-3 rounded-xl font-bold hover:bg-[#6aa663] transition mt-4">
         Create Account
       </SubmitButton>

@@ -21,6 +21,11 @@ export default async function LeadsPage({
   const userId = typeof session?.userId === 'string' ? session.userId : "";
   const userRole = typeof session?.role === 'string' ? session.role : undefined;
 
+const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+  const isAdmin = currentUser?.role === 'ADMIN';
+  const canEdit = isAdmin || currentUser?.canEdit === true;
+  const canDelete = isAdmin || currentUser?.canDelete === true;
+
   const params = await searchParams;
   const sort = (params.sort as string) || 'date_desc';
 
@@ -64,14 +69,18 @@ export default async function LeadsPage({
         </div>
         
         <div className="flex flex-wrap gap-3">
-          {/* 👇 NEW BUTTON: Support Ticket */}
-          <Link href="/dashboard/leads/support" className="bg-orange-50 text-orange-600 border border-orange-200 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-orange-100 transition shadow-sm">
-            <Wrench size={16} /> Log Support Ticket
-          </Link>
-          
-          <Link href="/dashboard/leads/create" className="bg-[#84c47c] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#6aa663] transition shadow-sm">
-            <Plus size={16} /> Add New Lead
-          </Link>
+          {/* 👇 WRAP WITH canEdit */}
+          {canEdit && (
+            <>
+              <Link href="/dashboard/leads/support" className="bg-orange-50 text-orange-600 border border-orange-200 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-orange-100 transition shadow-sm">
+                <Wrench size={16} /> Log Support Ticket
+              </Link>
+              
+              <Link href="/dashboard/leads/create" className="bg-[#84c47c] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#6aa663] transition shadow-sm">
+                <Plus size={16} /> Add New Lead
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -222,26 +231,30 @@ export default async function LeadsPage({
                         </div>
                       </td>
 
-                      {/* COLUMN 4: ACTIONS */}
+                    {/* COLUMN 4: ACTIONS */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end items-center gap-1">
                           
                           {index === 0 ? (
                             <>
-                              <Link 
-                                href={`/dashboard/clients/${client.id}/edit`}
-                                className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition"
-                                title="Edit Client"
-                              >
-                                <Pencil size={18} />
-                              </Link>
-                              <DeleteClientButton clientId={client.id} />
+                              {/* 👇 EDIT PERMISSION */}
+                              {canEdit && (
+                                <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition" title="Edit Client">
+                                  <Pencil size={18} />
+                                </Link>
+                              )}
+                              
+                              {/* 👇 DELETE PERMISSION */}
+                              {canDelete && (
+                                <DeleteClientButton clientId={client.id} />
+                              )}
                             </>
                           ) : (
                             <div className="w-[72px]"></div>
                           )}
                           
                           <div className="ml-2 border-l pl-2">
+                             {/* LeadActionMenu stays visible so they can claim jobs! */}
                             <LeadActionMenu 
     jobId={job.id} 
     currentStatus={job.status} 

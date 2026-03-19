@@ -38,9 +38,13 @@ export async function resetEmployeePassword(formData: FormData) {
   }
 }
 
-// 3. UPDATE PERSONNEL FILE (HR Details)
+// 3. UPDATE PERSONNEL FILE (HR Details & Permissions)
 export async function updatePersonnelFile(formData: FormData) {
   const userId = formData.get('userId') as string
+  
+  // 👇 Capture the new permissions (only if they are checked)
+  const canEdit = formData.get('canEdit') === 'on'
+  const canDelete = formData.get('canDelete') === 'on'
   
   try {
     await prisma.user.update({
@@ -52,6 +56,10 @@ export async function updatePersonnelFile(formData: FormData) {
         guarantorName: formData.get('guarantorName') as string,
         guarantorPhone: formData.get('guarantorPhone') as string,
         guarantorAddress: formData.get('guarantorAddress') as string,
+        
+        // 👇 Save the updated permissions
+        canEdit: canEdit,
+        canDelete: canDelete,
       }
     })
     revalidatePath('/dashboard/users')

@@ -164,15 +164,49 @@ export default function EmployeeCard({ user }: { user: any }) {
               </div>
             </div>
 
+            {/* 👇 NEW: System Permissions Block */}
+            <div className="pt-4 border-t border-gray-100 mt-6">
+              <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1 mb-4"><Shield size={12}/> System Data Permissions</h5>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className={`flex items-start gap-3 p-4 border rounded-xl transition ${isEditingHR ? 'bg-blue-50/30 border-blue-100 cursor-pointer hover:bg-blue-50' : 'bg-gray-50 border-gray-100 cursor-not-allowed opacity-80'}`}>
+                  <input 
+                    type="checkbox" 
+                    name="canEdit" 
+                    defaultChecked={user.canEdit}
+                    disabled={!isEditingHR}
+                    className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50" 
+                  />
+                  <div>
+                    <p className="font-bold text-blue-900 text-sm">Create & Edit Data</p>
+                    <p className="text-xs text-blue-700 mt-1">Allows user to add leads, log tickets, and edit client files.</p>
+                  </div>
+                </label>
+
+                <label className={`flex items-start gap-3 p-4 border rounded-xl transition ${isEditingHR ? 'bg-red-50/30 border-red-100 cursor-pointer hover:bg-red-50' : 'bg-gray-50 border-gray-100 cursor-not-allowed opacity-80'}`}>
+                  <input 
+                    type="checkbox" 
+                    name="canDelete" 
+                    defaultChecked={user.canDelete}
+                    disabled={!isEditingHR}
+                    className="mt-1 w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500 disabled:opacity-50" 
+                  />
+                  <div>
+                    <p className="font-bold text-red-900 text-sm">Delete Data</p>
+                    <p className="text-xs text-red-700 mt-1">Allows user to permanently wipe clients and their history.</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             {isEditingHR && (
-              <div className="pt-4 flex justify-end">
+              <div className="pt-6 flex justify-end">
                 <SubmitButton className="bg-[#84c47c] text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-[#6aa663]">
-                  <Save size={16} /> Save HR File
+                  <Save size={16} /> Save HR File & Permissions
                 </SubmitButton>
               </div>
             )}
           </form>
-
         </div>
       )}
     </div>
