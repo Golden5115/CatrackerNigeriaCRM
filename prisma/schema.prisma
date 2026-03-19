@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,10 +12,19 @@ datasource db {
 
 // --- ENUMS ---
 enum Role {
+  CEO
+  MANAGER
+  HR
   ADMIN
   CSR
   INSTALLER
   TECH_SUPPORT
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
 }
 
 enum JobStatus {
@@ -33,20 +44,38 @@ enum StockStatus {
   RETIRED
 }
 
+enum JobType {
+  NEW_INSTALL
+  MAINTENANCE        
+  DEVICE_REPLACEMENT 
+  SIM_REPLACEMENT    
+  TRANSFER           
+}
+
 // --- MODELS ---
 
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  password       String
-  fullName       String?
-  role           Role      @default(CSR)
-  accessibleModules String[] @default([]) // Stores things like ["LEADS", "TECH", "PAYMENTS"]
+  id                String        @id @default(uuid())
+  email             String        @unique
+  password          String
+  fullName          String?
+  role              Role          @default(CSR)
+  accessibleModules String[]      @default([]) 
+  status            AccountStatus @default(ACTIVE) 
   
-  createdAt      DateTime  @default(now())
+  // HR Profile Fields
+  phoneNumber       String?
+  address           String?
+  qualifications    String?       
+  guarantorName     String?
+  guarantorPhone    String?
+  guarantorAddress  String?
   
-  clientsAdded   Client[]  @relation("CreatedBy")
-  installerJobs  Job[]     @relation("InstallerJobs")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @default(now()) @updatedAt
+  
+  clientsAdded      Client[]      @relation("CreatedBy")
+  installerJobs     Job[]         @relation("InstallerJobs")
 }
 
 model Client {
@@ -83,7 +112,6 @@ model Vehicle {
   jobs        Job[]
 }
 
-// 3. Independent Device Table (IMEI Only)
 model Device {
   id        String       @id @default(cuid())
   imei      String       @unique
@@ -93,7 +121,6 @@ model Device {
   createdAt DateTime     @default(now())
 }
 
-// 4. Independent SIM Table (Number Only)
 model SimCard {
   id        String       @id @default(cuid())
   simNumber String       @unique
@@ -108,15 +135,12 @@ model Job {
   id              String      @id @default(uuid())
   vehicleId       String
   vehicle         Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  
-  // ❌ DELETED THE DUPLICATE LINE THAT WAS HERE ❌
 
   installerId     String?
   installer       User?       @relation("InstallerJobs", fields: [installerId], references: [id])
   
   status          JobStatus   @default(NEW_LEAD)
   
-  // 2. Separate Relations for Device and SIM
   deviceId        String?     @unique
   device          Device?     @relation(fields: [deviceId], references: [id])
 
@@ -127,20 +151,20 @@ model Job {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   
-  // Installation Data
   installDate     DateTime?
   installPhoto    String?
   odometer        Int?
   installerName   String?
 
-  // Tech Data
   configurationDate DateTime? 
   serverConfig      Boolean   @default(false)
   platformId        String?
   
-  // CSR / Payment Data
   onboarded         Boolean   @default(false)
   paymentStatus     String    @default("UNPAID")
   amountPaid        Decimal   @default(0.00) 
   paymentCollector  String?   
+
+  jobType         JobType     @default(NEW_INSTALL)
+  supportNotes    String?     @db.Text
 }

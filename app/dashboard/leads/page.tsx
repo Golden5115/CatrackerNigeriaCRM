@@ -2,7 +2,8 @@ import { verifySession } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import { 
-  Phone, Car, Plus, Clock, Calendar, Pencil, Hash 
+  Phone, Car, Plus, Clock, Calendar, Pencil, Hash, Wrench, 
+  AlertCircle
 } from "lucide-react";
 import LeadActionMenu from "@/components/LeadActionMenu";
 import SortControl from "@/components/SortControl"; 
@@ -57,20 +58,24 @@ export default async function LeadsPage({
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800">Sales Pipeline</h2>
-          <p className="text-gray-500">Manage leads, schedule installations, or mark as done.</p>
+          <h2 className="text-3xl font-bold text-gray-800">Sales & Support Pipeline</h2>
+          <p className="text-gray-500">Manage leads, schedule installations, and log support tickets.</p>
         </div>
         
-        <div className="flex gap-3 w-full md:w-auto">
-          <div className="w-48"><SortControl /></div>
-          <Link 
-            href="/dashboard/leads/create" 
-            className="bg-[#84c47c] hover:bg-[#6aa663] text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform active:scale-95 whitespace-nowrap"
-          >
-            <Plus size={20} />
-            Add Lead
+        <div className="flex flex-wrap gap-3">
+          {/* 👇 NEW BUTTON: Support Ticket */}
+          <Link href="/dashboard/leads/support" className="bg-orange-50 text-orange-600 border border-orange-200 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-orange-100 transition shadow-sm">
+            <Wrench size={16} /> Log Support Ticket
+          </Link>
+          
+          <Link href="/dashboard/leads/create" className="bg-[#84c47c] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#6aa663] transition shadow-sm">
+            <Plus size={16} /> Add New Lead
           </Link>
         </div>
+      </div>
+
+      <div className="flex justify-end">
+        <SortControl currentSort={sort} />
       </div>
 
       {/* TABLE */}
@@ -126,9 +131,24 @@ export default async function LeadsPage({
                         </div>
                       </td>
 
-                      {/* COLUMN 2: VEHICLE */}
+                      {/* COLUMN 2: VEHICLE & JOB TYPE */}
                       <td className="px-6 py-4">
                         <div className="space-y-1">
+                          
+                          {/* 👇 NEW: Support Badges */}
+                          {job.jobType !== 'NEW_INSTALL' && (
+                            <div className="mb-2">
+                              <span className={`text-[10px] font-bold px-2 py-1 rounded tracking-wider uppercase ${
+                                job.jobType === 'MAINTENANCE' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                                job.jobType === 'DEVICE_REPLACEMENT' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                job.jobType === 'SIM_REPLACEMENT' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                                'bg-blue-100 text-blue-700 border border-blue-200'
+                              }`}>
+                                {job.jobType.replace('_', ' ')}
+                              </span>
+                            </div>
+                          )}
+
                           <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
                             <Car size={16} className={isMultiVehicle ? "text-blue-500" : "text-gray-400"} /> 
                             <span>{vehicle.name} <span className="text-gray-400 font-normal">({vehicle.year})</span></span>
@@ -144,7 +164,6 @@ export default async function LeadsPage({
                               <span className="bg-blue-100 text-blue-800 text-[10px] px-2 py-1 rounded-full font-bold tracking-wider">NEW LEAD</span>
                             )}
                             
-                            {/* 👇 CHANGED: Show Installer Name if In Progress */}
                             {job.status === 'IN_PROGRESS' && (
                               <span className="flex items-center gap-1 bg-orange-100 text-orange-800 text-[10px] px-2 py-1 rounded-full font-bold tracking-wider">
                                 IN PROGRESS 
@@ -160,6 +179,16 @@ export default async function LeadsPage({
                               <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-1 rounded-full font-bold tracking-wider">SCHEDULED</span>
                             )}
                           </div>
+
+                          {/* 👇 NEW: Support Notes Box */}
+                          {job.supportNotes && (
+                            <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 shadow-sm max-w-sm">
+                              <span className="font-bold block mb-1 flex items-center gap-1">
+                                <AlertCircle size={12} /> Reported Issue:
+                              </span>
+                              {job.supportNotes}
+                            </div>
+                          )}
                         </div>
                       </td>
 
@@ -198,14 +227,16 @@ export default async function LeadsPage({
                           
                           <div className="ml-2 border-l pl-2">
                             <LeadActionMenu 
-                                jobId={job.id} 
-                                currentStatus={job.status} 
-                                installerId={job.installerId}
-                                currentUserId={userId}
-                                vehicleName={vehicle.name}
-                                installerName={job.installer?.fullName}
-                                currentUserRole={userRole}
-                            />
+    jobId={job.id} 
+    currentStatus={job.status} 
+    jobType={job.jobType}             // 👈 ADD THIS
+    vehicleId={vehicle.id}            // 👈 ADD THIS
+    installerId={job.installerId}
+    currentUserId={userId}
+    vehicleName={vehicle.name}
+    installerName={job.installer?.fullName}
+    currentUserRole={userRole}
+/>
                           </div>
                         </div>
                       </td>
@@ -217,7 +248,7 @@ export default async function LeadsPage({
           </table>
           
           {clients.length === 0 && (
-             <div className="p-12 text-center text-gray-500">No active leads in pipeline.</div>
+             <div className="p-12 text-center text-gray-500">No active leads or tickets in pipeline.</div>
           )}
         </div>
       </div>

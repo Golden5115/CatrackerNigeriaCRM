@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, Users, Server, 
-  Smartphone, CreditCard, Shield, Briefcase, LogOut, Package 
+  Smartphone, CreditCard, Shield, Briefcase, LogOut, Package, 
+  User // 👇 Added the User icon here
 } from "lucide-react";
 import Logo from "./Logo";
 import SearchInput from "./SearchInput";
@@ -13,12 +14,13 @@ import LoadingLink from "@/components/LoadingLink";
 // We added "requiredModule" and "adminOnly" rules to the list
 const allMenuItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard, requiredModule: null }, 
+  // 👇 Added My Profile so everyone can see it
+  { name: "My Profile", href: "/dashboard/profile", icon: User, requiredModule: null },
   { name: "Sales Pipeline", href: "/dashboard/leads", icon: Users, requiredModule: "/dashboard/leads" },
   { name: "Inventory", href: "/dashboard/inventory", icon: Package, requiredModule: "/dashboard/inventory" },
   { name: "Tech Support", href: "/dashboard/tech", icon: Server, requiredModule: "/dashboard/tech" },
   { name: "Client Onboarding", href: "/dashboard/activation", icon: Smartphone, requiredModule: "/dashboard/activation" },
   { name: "Client Database", href: "/dashboard/clients", icon: Briefcase, requiredModule: "/dashboard/clients" },
-  { name: "Payments", href: "/dashboard/payments", icon: CreditCard, requiredModule: "/dashboard/payments" },
   { name: "Team & Roles", href: "/dashboard/users", icon: Shield, adminOnly: true }, 
 ];
 
@@ -39,7 +41,7 @@ export default function Sidebar({
     // 2. Hide Admin-only pages (like Team & Roles) from regular staff
     if (item.adminOnly) return false;
     
-    // 3. Everyone is allowed to see the Overview Home Page
+    // 3. Everyone is allowed to see the Overview Home Page and My Profile
     if (!item.requiredModule) return true;
     
     // 4. For everything else, check if you checked their module box in the DB
