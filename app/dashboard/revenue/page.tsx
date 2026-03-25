@@ -26,7 +26,7 @@ export default async function RevenueAnalysisPage() {
 
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  let stats = {
+ const stats = {
     dailyRevenue: 0, 
     weeklyRevenue: 0, 
     monthlyRevenue: 0,
