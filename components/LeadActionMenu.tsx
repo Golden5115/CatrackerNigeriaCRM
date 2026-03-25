@@ -3,16 +3,15 @@
 import { useState } from "react"
 import { claimJob, submitInstallation, unclaimJob, markJobAsLost } from "@/app/actions/installer"
 import { processHardwareSwap, resolveMaintenanceJob } from "@/app/actions/support"
-import { MoreVertical, CheckCircle, Lock, Wrench, X, Loader2, RotateCcw, AlertTriangle, XCircle } from "lucide-react"
+import { MoreVertical, CheckCircle, Lock, Wrench, X, Loader2, RotateCcw, AlertTriangle, XCircle, UserPlus } from "lucide-react"
 import SubmitButton from "@/components/SubmitButton"
 import InventorySearch from "./InventorySearch"
-
 
 interface LeadActionMenuProps {
   jobId: string
   currentStatus: string
-  jobType: string        // 👈 Added to detect support vs install
-  vehicleId: string      // 👈 Added to find old hardware during swap
+  jobType: string        
+  vehicleId: string      
   installerId?: string | null
   currentUserId: string 
   vehicleName?: string
@@ -27,27 +26,30 @@ export default function LeadActionMenu({
   const [showInstallModal, setShowInstallModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
   const [showLostModal, setShowLostModal] = useState(false)
+  const [showClaimModal, setShowClaimModal] = useState(false) // 👈 NEW: Dispatch Modal
+  const [manualInstallerName, setManualInstallerName] = useState("") // 👈 NEW: Manual Name State
+  
   const [resolutionType, setResolutionType] = useState<'WIRING' | 'DEVICE' | 'SIM'>('WIRING')
   const [isClaiming, setIsClaiming] = useState(false)
   const [isUnclaiming, setIsUnclaiming] = useState(false)
 
-  // 1. HANDLE CLAIMING
+  // 1. HANDLE CLAIMING / DISPATCHING
   const handleClaim = async () => {
     setIsClaiming(true)
     try {
-      const res = await claimJob(jobId)
+      const res = await claimJob(jobId, manualInstallerName) // 👈 Pass the manual name!
       if (res?.error) alert("Error: " + res.error)
     } catch (err) {
       alert("A critical system error occurred.")
     }
     setIsClaiming(false)
+    setShowClaimModal(false)
     setIsOpen(false)
   }
 
   // 2. HANDLE UNCLAIMING
   const handleUnclaim = async () => {
     if (!confirm("Are you sure you want to return this job to the pool?")) return;
-    
     setIsUnclaiming(true)
     try {
       const res = await unclaimJob(jobId)
@@ -59,21 +61,20 @@ export default function LeadActionMenu({
     setIsOpen(false)
   }
 
-  // 3. LOCK LOGIC
-  const isAdmin = currentUserRole === 'ADMIN'
+  // 3. SMART LOCK LOGIC
+  const isAdminOrOps = currentUserRole === 'ADMIN' || currentUserRole === 'OPERATIONS'
   const isMyJob = installerId === currentUserId
-  const isLocked = currentStatus === 'IN_PROGRESS' && !isMyJob && !isAdmin
+  const canManageJob = isMyJob || isAdminOrOps // Ops & Admins can manage ANY job
 
-  if (currentStatus === 'LEAD_LOST') {
-    return null; // Don't show the 3 dots at all if it's already dead
-  }
+  const isLocked = currentStatus === 'IN_PROGRESS' && !canManageJob
+
+  if (currentStatus === 'LEAD_LOST') return null;
 
   if (isLocked) {
     return (
       <div className="flex flex-col items-end text-gray-400 text-xs italic">
         <div className="flex items-center gap-1">
-           <Lock size={12} />
-           <span>Taken</span>
+           <Lock size={12} /> <span>Taken</span>
         </div>
         {installerName && <span className="text-[10px]">by {installerName}</span>}
       </div>
@@ -95,23 +96,24 @@ export default function LeadActionMenu({
           
           <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border z-20 overflow-hidden">
             
+           {/* UNCLAIMED JOBS */}
            {(currentStatus === 'NEW_LEAD' || currentStatus === 'SCHEDULED') && (
                <>
-                 <button onClick={handleClaim} disabled={isClaiming} className="w-full text-left px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-bold border-b border-gray-50">
-                   {isClaiming ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle size={16} />}
-                   Claim & Start Job
+                 <button onClick={() => { setShowClaimModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-bold border-b border-gray-50">
+                   <UserPlus size={16} /> Claim & Dispatch
                  </button>
                  
-                 {/* 👇 NEW BUTTON: Mark as Lost */}
-                 <button onClick={() => { setShowLostModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 font-bold">
-                   <XCircle size={16} /> Mark as Lost
-                 </button>
+                 {isAdminOrOps && (
+                   <button onClick={() => { setShowLostModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 font-bold">
+                     <XCircle size={16} /> Mark as Lost
+                   </button>
+                 )}
                </>
             )}
 
-            {currentStatus === 'IN_PROGRESS' && isMyJob && (
+            {/* IN PROGRESS JOBS (Fixed Visibility) */}
+            {currentStatus === 'IN_PROGRESS' && canManageJob && (
                <>
-                 {/* SMART SWITCH: Show Install or Support Button */}
                  {jobType === 'NEW_INSTALL' ? (
                    <button onClick={() => { setShowInstallModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2 font-bold border-b border-gray-50">
                      <Wrench size={16} /> Finish Installation
@@ -122,25 +124,62 @@ export default function LeadActionMenu({
                    </button>
                  )}
 
-                 <button onClick={handleUnclaim} disabled={isUnclaiming} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-bold">
+                 <button onClick={handleUnclaim} disabled={isUnclaiming} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-bold border-b border-gray-50">
                    {isUnclaiming ? <Loader2 className="animate-spin" size={16}/> : <RotateCcw size={16} />}
                    Return Job to Pool
                  </button>
+
+                 {/* 👇 FIX: Mark as lost is now available even if IN_PROGRESS */}
+                 {isAdminOrOps && (
+                   <button onClick={() => { setShowLostModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 font-bold">
+                     <XCircle size={16} /> Mark as Lost
+                   </button>
+                 )}
                </>
             )}
-
-            {currentStatus === 'IN_PROGRESS' && isAdmin && !isMyJob && (
-               <button onClick={handleUnclaim} disabled={isUnclaiming} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-bold bg-red-50/50">
-                 {isUnclaiming ? <Loader2 className="animate-spin" size={16}/> : <RotateCcw size={16} />}
-                 Admin: Return to Pool
-               </button>
-            )}
-
           </div>
         </>
       )}
 
-      {/* --- 1. NEW INSTALLATION MODAL --- */}
+      {/* --- 1. CLAIM & DISPATCH MODAL (NEW) --- */}
+      {showClaimModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                 <UserPlus className="text-blue-500" /> Dispatch Job
+               </h3>
+               <button onClick={() => setShowClaimModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+            </div>
+
+            <div className="space-y-4">
+               <div>
+                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Assign Field Installer (Optional)</label>
+                 <input 
+                   type="text"
+                   value={manualInstallerName}
+                   onChange={(e) => setManualInstallerName(e.target.value)}
+                   placeholder="e.g. John Doe (Leave blank if assigning to yourself)" 
+                   className="w-full p-3 border rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+                 />
+                 <p className="text-[10px] text-gray-400 mt-2">Enter the name of the installer who will physically handle this vehicle, or leave it blank to claim it under your own account.</p>
+               </div>
+
+               <div className="pt-4">
+                 <button 
+                   onClick={handleClaim}
+                   disabled={isClaiming} 
+                   className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition disabled:opacity-50 flex justify-center items-center"
+                 >
+                   {isClaiming ? <Loader2 size={20} className="animate-spin" /> : "Confirm Dispatch"}
+                 </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- 2. NEW INSTALLATION MODAL --- */}
       {showInstallModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
@@ -180,7 +219,7 @@ export default function LeadActionMenu({
         </div>
       )}
 
-      {/* --- 2. SUPPORT & SWAP MODAL --- */}
+      {/* --- 3. SUPPORT & SWAP MODAL --- */}
       {showSupportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border-t-4 border-orange-500">
@@ -195,7 +234,6 @@ export default function LeadActionMenu({
                 if (resolutionType === 'WIRING') {
                   await resolveMaintenanceJob(jobId);
                 } else {
-                  // If they swapped hardware, add the extra data and trigger the smart swap
                   formData.append('swapType', resolutionType);
                   formData.append('vehicleId', vehicleId);
                   formData.append('jobId', jobId);
@@ -217,7 +255,6 @@ export default function LeadActionMenu({
                  </select>
                </div>
 
-               {/* Show Inventory Search ONLY if they decided to swap something */}
                {resolutionType === 'DEVICE' && (
                  <div className="bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
                    <label className="block text-xs font-bold text-red-800 uppercase mb-2">Scan New Tracker</label>
@@ -245,7 +282,7 @@ export default function LeadActionMenu({
         </div>
       )}
 
-      {/* --- 3. MARK AS LOST MODAL --- */}
+      {/* --- 4. MARK AS LOST MODAL --- */}
       {showLostModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">

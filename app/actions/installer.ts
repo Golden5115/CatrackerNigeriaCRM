@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma"
 import { verifySession } from "@/lib/session"
 import { revalidatePath } from "next/cache"
 
-export async function claimJob(jobId: string) {
+// 1. CLAIM JOB (Now supports manually typing the installer's name)
+export async function claimJob(jobId: string, manualInstallerName?: string) {
   try {
     const session = await verifySession()
     if (!session?.userId) {
@@ -22,6 +23,7 @@ export async function claimJob(jobId: string) {
       data: {
         status: 'IN_PROGRESS',
         installerId: session.userId,
+        installerName: manualInstallerName || null // 👇 Saves the manual name!
       }
     })
 
@@ -34,14 +36,19 @@ export async function claimJob(jobId: string) {
   }
 }
 
-
+// 2. UNCLAIM JOB (Fixed permissions)
 export async function unclaimJob(jobId: string) {
   try {
     const session = await verifySession()
+    if (!session?.userId) return { error: "Unauthorized." }
+
+    const job = await prisma.job.findUnique({ where: { id: jobId } })
     
-    // 👇 FIX: Strictly check for ADMIN role
-    if (!session?.userId || session.role !== 'ADMIN') { 
-      return { error: "Unauthorized. Only Admins can reassign or return jobs." } 
+    // 👇 FIX: Allow Admins, Operations, OR the user who originally claimed it
+    const canUnclaim = session.role === 'ADMIN' || session.role === 'OPERATIONS' || job?.installerId === session.userId
+
+    if (!canUnclaim) { 
+      return { error: "Unauthorized. You cannot return a job you didn't claim." } 
     }
 
     await prisma.job.update({
@@ -49,6 +56,7 @@ export async function unclaimJob(jobId: string) {
       data: {
         status: 'SCHEDULED',
         installerId: null,   
+        installerName: null // Clear the manual name too
       }
     })
 
@@ -60,11 +68,11 @@ export async function unclaimJob(jobId: string) {
   }
 }
 
-// 2. SUBMIT INSTALLATION (DONE)
+// 3. SUBMIT INSTALLATION
 export async function submitInstallation(formData: FormData) {
   const jobId = formData.get('jobId') as string
-  const deviceId = formData.get('deviceId') as string // <--- Now expects the ID
-  const simCardId = formData.get('simCardId') as string // <--- Now expects the ID
+  const deviceId = formData.get('deviceId') as string 
+  const simCardId = formData.get('simCardId') as string 
   const plateNumber = formData.get('plateNumber') as string
   const vehicleName = formData.get('vehicleName') as string
 
@@ -74,11 +82,9 @@ export async function submitInstallation(formData: FormData) {
 
   try {
     await prisma.$transaction(async (tx) => {
-      // 1. Lock the Tracker & SIM as 'INSTALLED'
       await tx.device.update({ where: { id: deviceId }, data: { status: 'INSTALLED' } })
       await tx.simCard.update({ where: { id: simCardId }, data: { status: 'INSTALLED' } })
 
-      // 2. Update the Job
       await tx.job.update({
         where: { id: jobId },
         data: {
@@ -86,10 +92,7 @@ export async function submitInstallation(formData: FormData) {
           device: { connect: { id: deviceId } },
           simCard: { connect: { id: simCardId } },
           vehicle: {
-            update: {
-              name: vehicleName,
-              plateNumber: plateNumber
-            }
+            update: { name: vehicleName, plateNumber: plateNumber }
           }
         }
       })
@@ -103,7 +106,7 @@ export async function submitInstallation(formData: FormData) {
   }
 }
 
-
+// 4. MARK AS LOST
 export async function markJobAsLost(formData: FormData) {
   const jobId = formData.get('jobId') as string
   const lostReason = formData.get('lostReason') as string
@@ -117,11 +120,9 @@ export async function markJobAsLost(formData: FormData) {
       }
     })
     
-    // We import revalidatePath from next/cache at the top of the file if not there already
     const { revalidatePath } = await import('next/cache')
     revalidatePath('/dashboard/leads')
     revalidatePath('/dashboard/clients')
-    
     return { success: true }
   } catch (error) {
     return { error: "Failed to mark lead as lost." }

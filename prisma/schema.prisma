@@ -16,6 +16,7 @@ enum Role {
   MANAGER
   HR
   ADMIN
+  OPERATIONS   // 👈 ADD THIS
   CSR
   INSTALLER
   TECH_SUPPORT

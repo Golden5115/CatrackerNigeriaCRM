@@ -44,6 +44,7 @@ export default function EmployeeCard({ user }: { user: any }) {
           <div className={`h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 ${
              user.role === 'CEO' || user.role === 'MANAGER' ? 'bg-purple-100 text-purple-700' :
              user.role === 'HR' || user.role === 'ADMIN' ? 'bg-red-100 text-red-700' :
+             user.role === 'OPERATIONS' ? 'bg-orange-100 text-orange-700' : /* 👈 ADD THIS */
              user.role === 'INSTALLER' ? 'bg-blue-100 text-blue-700' :
              'bg-[#e0f2de] text-[#2d4a2a]'
           }`}>

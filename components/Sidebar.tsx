@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, Users, Server, 
-  Smartphone, CreditCard, Shield, Briefcase, LogOut, Package, User, Lock 
+  Smartphone, CreditCard, Shield, Briefcase, LogOut, Package, User, Lock, 
+  TrendingUp
 } from "lucide-react";
 import Logo from "./Logo";
 import SearchInput from "./SearchInput";
@@ -19,6 +20,10 @@ const allMenuItems = [
   { name: "Client Onboarding", href: "/dashboard/activation", icon: Smartphone, requiredModule: "/dashboard/activation" },
   { name: "Client Database", href: "/dashboard/clients", icon: Briefcase, requiredModule: "/dashboard/clients" },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, requiredModule: "/dashboard/payments" },
+  
+  // 👇 NEW REVENUE MODULE LINK (Admin Only for security)
+  { name: "Revenue Analysis", href: "/dashboard/revenue", icon: TrendingUp, adminOnly: true },
+  
   { name: "Team & Roles", href: "/dashboard/users", icon: Shield, adminOnly: true }, 
 ];
 

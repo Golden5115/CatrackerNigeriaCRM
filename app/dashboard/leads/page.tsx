@@ -181,12 +181,13 @@ const currentUser = await prisma.user.findUnique({ where: { id: userId } });
                               </span>
                             )}
                             
-                            {job.status === 'IN_PROGRESS' && (
+                           {job.status === 'IN_PROGRESS' && (
                               <span className="flex items-center gap-1 bg-orange-100 text-orange-800 text-[10px] px-2 py-1 rounded-full font-bold tracking-wider">
                                 IN PROGRESS 
-                                {job.installer && (
+                                {/* 👇 Show the manually typed name if it exists, otherwise fallback to the user account name */}
+                                {(job.installerName || job.installer) && (
                                   <span className="font-normal opacity-80 border-l border-orange-300 pl-1 ml-1">
-                                    by {job.installer.fullName?.split(' ')[0] || "User"}
+                                    by {job.installerName || job.installer?.fullName?.split(' ')[0] || "User"}
                                   </span>
                                 )}
                               </span>

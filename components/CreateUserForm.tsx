@@ -89,11 +89,12 @@ export default function CreateUserForm() {
         </div>
       </div>
 
-      <div>
+     <div>
         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Role / Title</label>
         <select name="role" className="w-full p-3 border rounded-xl bg-gray-50 outline-none">
           <option value="INSTALLER">Field Installer</option>
           <option value="CSR">Customer Service (CSR)</option>
+          <option value="OPERATIONS">Operations Manager</option> {/* 👈 ADD THIS */}
           <option value="TECH_SUPPORT">Tech Support</option>
           <option value="ADMIN">Administrator</option>
         </select>
