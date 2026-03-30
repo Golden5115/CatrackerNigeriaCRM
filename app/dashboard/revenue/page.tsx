@@ -16,7 +16,15 @@ export default async function RevenueAnalysisPage() {
     redirect('/dashboard');
   }
 
-  const allJobs = await prisma.job.findMany()
+  const allJobs = await prisma.job.findMany({
+      select: {
+        status: true,
+        updatedAt: true,
+        onboarded: true,
+        amountPaid: true,      // Needed for Revenue
+        paymentStatus: true    // Needed for Revenue
+      }
+    })
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

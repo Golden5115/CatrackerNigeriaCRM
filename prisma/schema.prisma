@@ -44,6 +44,8 @@ model Client {
   createdAt   DateTime  @default(now())
   createdBy   User?     @relation("CreatedBy", fields: [createdById], references: [id])
   vehicles    Vehicle[]
+  @@index([phoneNumber])
+  @@index([fullName])
 }
 
 model Vehicle {
@@ -55,6 +57,7 @@ model Vehicle {
   color       String?
   jobs        Job[]
   client      Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@index([plateNumber])
 }
 
 model Device {
@@ -63,6 +66,8 @@ model Device {
   createdAt DateTime    @default(now())
   status    StockStatus @default(IN_STOCK)
   job       Job?
+  @@index([imei])
+  @@index([status])
 }
 
 model SimCard {
@@ -72,6 +77,8 @@ model SimCard {
   status    StockStatus @default(IN_STOCK)
   createdAt DateTime    @default(now())
   job       Job?
+  @@index([simNumber])
+  @@index([status])
 }
 
 model Job {
@@ -101,6 +108,7 @@ model Job {
   installer         User?     @relation("InstallerJobs", fields: [installerId], references: [id])
   simCard           SimCard?  @relation(fields: [simCardId], references: [id])
   vehicle           Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  @@index([status])
 }
 
 enum Role {

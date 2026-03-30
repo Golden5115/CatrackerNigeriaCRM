@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma"
 import Link from "next/link";
+import { Suspense } from "react"; // 👈 NEW: Import Suspense
 import { 
   Car, AlertCircle, CheckCircle, MailWarning, 
   Wrench, Pencil, Trash2, Smartphone, 
-  XCircle
+  XCircle, Loader2 
 } from "lucide-react";
 import { verifySession } from "@/lib/session"
 import DeleteClientButton from "@/components/DeleteClientButton";
@@ -11,22 +12,11 @@ import SortControl from "@/components/SortControl";
 
 export const dynamic = 'force-dynamic';
 
-export default async function ClientsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
-  const params = await searchParams;
-  const sort = (params.sort as string) || 'date_desc';
-// 👇 NEW: Fetch Split Permissions
-  const session = await verifySession() 
-  const userId = typeof session?.userId === 'string' ? session.userId : "";
-  const currentUser = await prisma.user.findUnique({ where: { id: userId } });
-  const isAdmin = currentUser?.role === 'ADMIN';
-  const canEdit = isAdmin || currentUser?.canEdit === true;
-  const canDelete = isAdmin || currentUser?.canDelete === true;
-
-  // 1. Determine Sorting Logic
+// ==========================================
+// 1. THE DATA COMPONENT (Loads in background)
+// ==========================================
+async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdit: boolean, canDelete: boolean }) {
+  // Determine Sorting Logic
   let orderBy = {};
   switch (sort) {
     case 'name_asc': orderBy = { fullName: 'asc' }; break;
@@ -35,32 +25,139 @@ export default async function ClientsPage({
     case 'date_desc': default: orderBy = { createdAt: 'desc' }; break;
   }
 
-  // 2. Fetch Clients
+  // Fetch Clients
   const clients = await prisma.client.findMany({
     where: {
       vehicles: {
-        some: {
-          jobs: {
-            some: {
-              status: { 
-                // 👇 FIX: Updated to match the new schema JobStatus enum
-                in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE', 'LEAD_LOST'] 
-              }
-            }
-          }
-        }
+        some: { jobs: { some: { status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE', 'LEAD_LOST'] } } } }
       }
     },
     include: {
-      vehicles: {
-        include: { jobs: true }
-      }
+      vehicles: { include: { jobs: true } }
     },
     orderBy: orderBy
   });
 
   return (
+    <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Client Info</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Fleet Status</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Config Date</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Financials</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Alerts</th>
+              <th className="px-6 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {clients.map((client) => {
+              // --- FINANCIAL CALCULATION ---
+              const totalPaid = client.vehicles.reduce((sum, v) => sum + (v.jobs[0]?.amountPaid ? Number(v.jobs[0].amountPaid) : 0), 0);
+
+              // --- CONFIG DATE LOGIC ---
+              const configDates = client.vehicles
+                .map(v => v.jobs[0]?.configurationDate)
+                .filter(d => d != null)
+                .sort((a,b) => new Date(b!).getTime() - new Date(a!).getTime());
+              
+              const lastConfigDate = configDates.length > 0 ? new Date(configDates[0]!).toLocaleDateString('en-GB') : 'Pending';
+
+              // --- STATUS LOGIC ---
+              const unpaidCount = client.vehicles.filter(v => v.jobs.some(j => j.status === 'ACTIVE' && j.paymentStatus !== 'PAID')).length;
+              const techQueueCount = client.vehicles.filter(v => v.jobs.some(j => j.status === 'PENDING_QC')).length;
+              const onboardingCount = client.vehicles.filter(v => v.jobs.some(j => j.status === 'CONFIGURED' && !j.onboarded)).length;
+              const isAllClear = unpaidCount === 0 && techQueueCount === 0 && onboardingCount === 0;
+              const isLostProspect = client.vehicles.every(v => v.jobs.every(j => j.status === 'LEAD_LOST'));
+
+              return (
+                <tr key={client.id} className="hover:bg-gray-50 group transition">
+                  {/* 1. Client Info */}
+                  <td className="px-6 py-4">
+                    <div className="font-bold text-gray-900">{client.fullName}</div>
+                    <div className="text-xs text-gray-500">{client.phoneNumber}</div>
+                  </td>
+                  
+                  {/* 2. Fleet Info */}
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">
+                      <Car size={12} /> {client.vehicles.length} Vehicle(s)
+                    </span>
+                    <div className="text-xs text-gray-400 mt-1 truncate max-w-[150px]">{client.vehicles.map(v => v.name).join(", ")}</div>
+                  </td>
+
+                  {/* 3. Configuration Date */}
+                  <td className="px-6 py-4">
+                    <div className={`text-xs px-2 py-1 rounded border w-fit font-medium flex items-center gap-1 ${lastConfigDate === 'Pending' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                       <Smartphone size={10} /> {lastConfigDate}
+                    </div>
+                  </td>
+
+                  {/* 4. Financials */}
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-green-700">₦{totalPaid.toLocaleString()}</span>
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wide">Total Paid</span>
+                    </div>
+                  </td>
+
+                  {/* 5. Alerts */}
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1 items-start">
+                      {unpaidCount > 0 && <Link href="/dashboard/payments" className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase"><AlertCircle size={10} /> {unpaidCount} Due</Link>}
+                      {techQueueCount > 0 && <Link href="/dashboard/tech" className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase"><Wrench size={10} /> {techQueueCount} In Tech</Link>}
+                      {onboardingCount > 0 && <Link href="/dashboard/activation" className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase"><MailWarning size={10} /> Needs Login</Link>}
+                      {isAllClear && <span className="inline-flex items-center gap-1 text-green-600 text-xs font-medium"><CheckCircle size={12} /> All Clear</span>}
+                      {isLostProspect && <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-[10px] font-bold uppercase border"><XCircle size={10} /> Lost Prospect</span>}
+                    </div>
+                  </td>
+
+                  {/* 6. Actions */}
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end items-center gap-2">
+                      {canEdit && <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg"><Pencil size={18} /></Link>}
+                      {canDelete && <DeleteClientButton clientId={client.id} />}
+                      <Link href={`/dashboard/clients/${client.id}`} className="text-blue-600 hover:text-blue-900 font-medium text-sm border border-blue-200 px-3 py-1 rounded hover:bg-blue-50 ml-2">View</Link>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        
+        {clients.length === 0 && <div className="p-12 text-center text-gray-500">No active clients found.</div>}
+      </div>
+    </div>
+  );
+}
+
+
+// ==========================================
+// 2. THE PAGE SHELL (Loads Instantly)
+// ==========================================
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const params = await searchParams;
+  const sort = (params.sort as string) || 'date_desc';
+
+  // Fetch session fast
+  const session = await verifySession() 
+  const userId = typeof session?.userId === 'string' ? session.userId : "";
+  const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+  const isAdmin = currentUser?.role === 'ADMIN';
+  const canEdit = isAdmin || currentUser?.canEdit === true;
+  const canDelete = isAdmin || currentUser?.canDelete === true;
+
+  return (
     <div className="space-y-6">
+      
+      {/* 🟢 THIS LOADS INSTANTLY SO THE APP FEELS FAST */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
            <h2 className="text-3xl font-bold text-gray-800">Client Database</h2>
@@ -71,158 +168,16 @@ export default async function ClientsPage({
         </div>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Client Info</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Fleet Status</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Config Date</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Financials</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Alerts</th>
-                <th className="px-6 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {clients.map((client) => {
-                
-                // --- FINANCIAL CALCULATION ---
-                const totalPaid = client.vehicles.reduce((sum, v) => {
-                  return sum + (v.jobs[0]?.amountPaid ? Number(v.jobs[0].amountPaid) : 0);
-                }, 0);
-
-                // --- CONFIG DATE LOGIC ---
-                const configDates = client.vehicles
-                  .map(v => v.jobs[0]?.configurationDate)
-                  .filter(d => d != null)
-                  .sort((a,b) => new Date(b!).getTime() - new Date(a!).getTime());
-                
-                const lastConfigDate = configDates.length > 0 
-                  ? new Date(configDates[0]!).toLocaleDateString('en-GB') 
-                  : 'Pending';
-
-                // --- STATUS LOGIC ---
-                const unpaidCount = client.vehicles.filter(v => 
-                  v.jobs.some(j => j.status === 'ACTIVE' && j.paymentStatus !== 'PAID')
-                ).length;
-
-                // 👇 FIX: Updated from 'INSTALLED' to 'PENDING_QC'
-                const techQueueCount = client.vehicles.filter(v => 
-                  v.jobs.some(j => j.status === 'PENDING_QC')
-                ).length;
-
-                const onboardingCount = client.vehicles.filter(v => 
-                  v.jobs.some(j => j.status === 'CONFIGURED' && !j.onboarded)
-                ).length;
-
-                const isAllClear = unpaidCount === 0 && techQueueCount === 0 && onboardingCount === 0;
-
-                // Determine if this is purely a lost prospect (no active/pending jobs, just lost)
-                const isLostProspect = client.vehicles.every(v => v.jobs.every(j => j.status === 'LEAD_LOST'));
-
-
-                return (
-                  <tr key={client.id} className="hover:bg-gray-50 group transition">
-                    
-                    {/* 1. Client Info */}
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900">{client.fullName}</div>
-                      <div className="text-xs text-gray-500">{client.phoneNumber}</div>
-                    </td>
-                    
-                    {/* 2. Fleet Info */}
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">
-                        <Car size={12} /> {client.vehicles.length} Vehicle(s)
-                      </span>
-                      <div className="text-xs text-gray-400 mt-1 truncate max-w-[150px]">
-                        {client.vehicles.map(v => v.name).join(", ")}
-                      </div>
-                    </td>
-
-                    {/* 3. Configuration Date */}
-                    <td className="px-6 py-4">
-                      <div className={`text-xs px-2 py-1 rounded border w-fit font-medium flex items-center gap-1 ${lastConfigDate === 'Pending' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
-                         <Smartphone size={10} />
-                         {lastConfigDate}
-                      </div>
-                    </td>
-
-                    {/* 4. Financials */}
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-green-700">
-                          ₦{totalPaid.toLocaleString()}
-                        </span>
-                        <span className="text-[10px] text-gray-400 uppercase tracking-wide">Total Paid</span>
-                      </div>
-                    </td>
-
-                    {/* 5. Alerts */}
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1 items-start">
-                        {unpaidCount > 0 && (
-                          <Link href="/dashboard/payments" className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase hover:bg-red-200">
-                            <AlertCircle size={10} /> {unpaidCount} Payment Due
-                          </Link>
-                        )}
-                        {techQueueCount > 0 && (
-                          <Link href="/dashboard/tech" className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase hover:bg-orange-200">
-                            <Wrench size={10} /> {techQueueCount} In Tech
-                          </Link>
-                        )}
-                        {onboardingCount > 0 && (
-                          <Link href="/dashboard/activation" className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase hover:bg-purple-200">
-                            <MailWarning size={10} /> {onboardingCount} Needs Login
-                          </Link>
-                        )}
-                        {isAllClear && (
-                          <span className="inline-flex items-center gap-1 text-green-600 text-xs font-medium">
-                            <CheckCircle size={12} /> All Clear
-                          </span>
-                        )}
-                        {isLostProspect && (
-                          <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-[10px] font-bold uppercase border border-gray-200">
-                            <XCircle size={10} /> Lost Prospect
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                 {/* 6. Actions */}
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end items-center gap-2">
-                        
-                        {/* 👇 EDIT PERMISSION */}
-                        {canEdit && (
-                          <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition">
-                            <Pencil size={18} />
-                          </Link>
-                        )}
-
-                        {/* 👇 DELETE PERMISSION */}
-                        {canDelete && (
-                          <DeleteClientButton clientId={client.id} />
-                        )}
-
-                        {/* EVERYONE can view */}
-                        <Link href={`/dashboard/clients/${client.id}`} className="text-blue-600 hover:text-blue-900 font-medium text-sm border border-blue-200 px-3 py-1 rounded hover:bg-blue-50 ml-2">
-                          View
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          
-          {clients.length === 0 && (
-             <div className="p-12 text-center text-gray-500">No active clients found.</div>
-          )}
+      {/* 🟢 THIS SHOWS A SPINNER WHILE WAITING FOR THE DB */}
+      <Suspense fallback={
+        <div className="bg-white border rounded-xl shadow-sm p-24 flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="animate-spin text-[#84c47c]" size={40} />
+          <p className="text-gray-400 font-medium animate-pulse">Loading client records...</p>
         </div>
-      </div>
+      }>
+        <ClientsTable sort={sort} canEdit={canEdit} canDelete={canDelete} />
+      </Suspense>
+
     </div>
   );
 }

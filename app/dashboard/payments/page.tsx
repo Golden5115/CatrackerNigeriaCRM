@@ -1,16 +1,18 @@
 import { prisma } from "@/lib/prisma"
-import { Phone, CheckCircle, AlertCircle } from "lucide-react";
+import { Phone, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { markPaymentAsDone } from "@/app/actions/markPayment";
 import SubmitButton from "@/components/SubmitButton";
+import { Suspense } from "react";
 
-// Ensure page always fetches fresh data
 export const dynamic = 'force-dynamic';
 
-export default async function PaymentsPage() {
+// ==========================================
+// 1. THE DATA COMPONENT
+// ==========================================
+async function PaymentsList() {
   const jobs = await prisma.job.findMany({
     where: { 
       paymentStatus: { not: 'PAID' },
-      // 👇 FIX: Changed 'INSTALLED' to 'PENDING_QC' to match your new schema
       status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE'] }
     },
     include: {
@@ -20,12 +22,8 @@ export default async function PaymentsPage() {
   });
 
   return (
-    <div>
-      <div className="flex justify-between items-end mb-8">
-        <div>
-           <h2 className="text-3xl font-bold text-gray-800">Payment Collections</h2>
-           <p className="text-gray-500">Track outstanding balances and record receipts.</p>
-        </div>
+    <>
+      <div className="flex justify-end mb-6">
         <div className="bg-orange-100 text-orange-800 px-4 py-2 rounded-lg font-bold text-sm">
           {jobs.length} Pending Payments
         </div>
@@ -33,9 +31,8 @@ export default async function PaymentsPage() {
 
       <div className="grid gap-4">
         {jobs.map((job) => (
-          <div key={job.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div key={job.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6 hover:shadow-md transition">
             
-            {/* Client Details */}
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="text-lg font-bold text-gray-900">{job.vehicle.client.fullName}</h3>
@@ -56,7 +53,6 @@ export default async function PaymentsPage() {
               </div>
             </div>
 
-            {/* Action Section */}
             <div className="flex items-center gap-4">
               <div className="text-right mr-4 hidden md:block">
                 <span className="block text-xs text-gray-400 uppercase">Service Status</span>
@@ -65,37 +61,19 @@ export default async function PaymentsPage() {
 
               <form action={markPaymentAsDone} className="flex items-end gap-2">
                 <input type="hidden" name="jobId" value={job.id} />
-                
                 <div>
                   <label className="text-[10px] text-gray-500 uppercase font-bold block">Amount (₦)</label>
-                  <input 
-                    name="amount" 
-                    type="number" 
-                    required 
-                    placeholder="0.00" 
-                    className="w-24 px-2 py-1 text-sm border rounded"
-                  />
+                  <input name="amount" type="number" required placeholder="0.00" className="w-24 px-2 py-1 text-sm border rounded" />
                 </div>
-
                 <div>
                   <label className="text-[10px] text-gray-500 uppercase font-bold block">Collector</label>
-                  <input 
-                    name="collector" 
-                    required 
-                    placeholder="Name" 
-                    className="w-24 px-2 py-1 text-sm border rounded"
-                  />
+                  <input name="collector" required placeholder="Name" className="w-24 px-2 py-1 text-sm border rounded" />
                 </div>
-
-                <SubmitButton 
-                  className="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold h-fit mb-[1px]"
-                  loadingText="..."
-                >
+                <SubmitButton className="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold h-fit mb-[1px]" loadingText="...">
                   Confirm
                 </SubmitButton>
               </form>
             </div>
-
           </div>
         ))}
 
@@ -107,6 +85,31 @@ export default async function PaymentsPage() {
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+// ==========================================
+// 2. THE PAGE SHELL
+// ==========================================
+export default function PaymentsPage() {
+  return (
+    <div>
+      {/* 🟢 HEADER LOADS INSTANTLY */}
+      <div className="mb-4">
+         <h2 className="text-3xl font-bold text-gray-800">Payment Collections</h2>
+         <p className="text-gray-500">Track outstanding balances and record receipts.</p>
+      </div>
+
+      {/* 🟢 LIST SHOWS SPINNER WHILE WAITING */}
+      <Suspense fallback={
+        <div className="mt-8 bg-white border border-gray-200 rounded-xl shadow-sm p-24 flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="animate-spin text-[#84c47c]" size={40} />
+          <p className="text-gray-400 font-medium animate-pulse">Loading payment records...</p>
+        </div>
+      }>
+        <PaymentsList />
+      </Suspense>
     </div>
   );
 }
