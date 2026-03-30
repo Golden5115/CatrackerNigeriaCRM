@@ -6,26 +6,25 @@ import { redirect } from 'next/navigation'
 
 export async function addVehicleToClient(formData: FormData) {
   const clientId = formData.get('clientId') as string
-  const make = formData.get('make') as string
-  const model = formData.get('model') as string
+  const vehicleName = formData.get('vehicleName') as string
+  const year = formData.get('year') as string
   const plate = formData.get('plate') as string
 
-  if (!clientId || !plate) {
-    throw new Error("Missing Data")
+  if (!clientId || !vehicleName) {
+    throw new Error("Missing required data")
   }
 
   // 1. Create Vehicle linked to EXISTING Client
   const newVehicle = await prisma.vehicle.create({
     data: {
       clientId: clientId,
-      // FIX: Combine Make/Model into 'name' and add a default year
-      name: `${make} ${model}`.trim(), 
-      year: "Unknown", // Default since the simple form doesn't ask for year
-      plateNumber: plate,
+      name: vehicleName, 
+      year: year || null, 
+      plateNumber: plate || null,
     }
   })
 
-  // 2. Start a Job Ticket
+  // 2. Start a Job Ticket for the new vehicle
   await prisma.job.create({
     data: {
       vehicleId: newVehicle.id,
@@ -33,7 +32,10 @@ export async function addVehicleToClient(formData: FormData) {
     }
   })
 
-  // 3. Refresh and Redirect
+  // 3. Refresh Pipeline & Client DB, then send user to Pipeline!
   revalidatePath(`/dashboard/clients/${clientId}`)
-  redirect(`/dashboard/clients/${clientId}`)
+  revalidatePath('/dashboard/leads')
+  
+  // Redirect back to the Pipeline so they can dispatch it immediately
+  redirect('/dashboard/leads')
 }

@@ -59,10 +59,21 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
       </div>
 
       {/* 2. VEHICLE FLEET CARDS */}
+     {/* 2. VEHICLE FLEET CARDS */}
       <div>
-        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <Car className="text-[#2d4a2a]" /> Vehicle Fleet & Configuration
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Car className="text-[#2d4a2a]" /> Vehicle Fleet & Configuration
+          </h2>
+          
+          {/* 👇 NEW: Add Vehicle Button for Returning Clients */}
+          <Link 
+            href={`/dashboard/clients/${client.id}/add-vehicle`}
+            className="bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition shadow-sm flex items-center gap-2"
+          >
+            <Car size={16} /> Add New Vehicle
+          </Link>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            {client.vehicles.map((vehicle) => {
