@@ -5,26 +5,32 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 
+// 👇 FIX 1: Add onClick and title to the allowed properties
 interface LoadingLinkProps {
   href: string;
   children: React.ReactNode;
   className?: string;
+  title?: string; 
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
-export default function LoadingLink({ href, children, className = "" }: LoadingLinkProps) {
+export default function LoadingLink({ href, children, className = "", title, onClick }: LoadingLinkProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const pathname = usePathname(); // <--- Get current URL
+  const pathname = usePathname(); 
 
-  // 🛑 FIX: Automatically stop spinning when the URL changes
   useEffect(() => {
     setIsLoading(false);
   }, [pathname]);
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    // Only spin if we are actually navigating to a DIFFERENT page
-    // (Prevents spinning if you click the link you are already on)
+    // 1. Only spin if navigating to a DIFFERENT page
     if (pathname !== href) {
         setIsLoading(true);
+    }
+    
+    // 👇 FIX 2: If the parent component (like the Sidebar) passed an onClick, trigger it!
+    if (onClick) {
+        onClick(e);
     }
   };
 
@@ -32,16 +38,15 @@ export default function LoadingLink({ href, children, className = "" }: LoadingL
     <Link 
       href={href} 
       onClick={handleClick}
+      title={title} // 👇 FIX 3: Pass the title down to the HTML
       className={`relative ${className} ${isLoading ? 'opacity-70 pointer-events-none' : ''}`}
     >
-      {/* Show Spinner Overlay */}
       {isLoading && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
            <Loader2 className="animate-spin text-[#84c47c]" size={16} />
         </div>
       )}
       
-      {/* Keep original children visible but slightly dimmed */}
       {children}
     </Link>
   )

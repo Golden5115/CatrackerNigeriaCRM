@@ -19,7 +19,8 @@ export default async function DashboardLayout({
     : null
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    // 👇 ADDED: flex-col md:flex-row 
+    <div className="flex h-screen overflow-hidden bg-gray-50 flex-col md:flex-row">
       
       {/* 3. Hand the secure permissions directly to the Sidebar */}
       <Sidebar 

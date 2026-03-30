@@ -2,7 +2,9 @@ import { cookies } from 'next/headers'
 import { verifySession } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ShieldCheck, ArrowRight, Activity, Users, MapPin } from 'lucide-react'
+import { ShieldCheck, ArrowRight, Users, MapPin } from 'lucide-react'
+import Logo from '@/components/Logo' // 👈 NEW: Importing your official Logo component
+
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
@@ -19,22 +21,22 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       
-      {/* Navbar */}
-      <nav className="border-b border-gray-100 p-6 flex justify-between items-center">
-        <div className="flex items-center gap-2 font-bold text-xl text-[#2d4a2a]">
-           <div className="w-8 h-8 bg-[#84c47c] rounded-lg flex items-center justify-center text-white">
-             <Activity size={20} />
-           </div>
-           Cartracker Nigeria
-        </div>
-        <Link 
-          href="/login" 
-          className="bg-black text-white px-6 py-2 rounded-full font-medium hover:bg-gray-800 transition text-sm"
-        >
-          Sign In
-        </Link>
-      </nav>
-
+      {/* Navbar - NOW DARK GREEN TO MAKE WHITE LOGO POP */}
+      <div className="bg-[#2d4a2a] w-full shadow-md">
+        <nav className="p-6 flex justify-between items-center max-w-7xl mx-auto w-full">
+          
+          {/* Text is now white to match the white logo */}
+          <Logo textClassName="text-white" showText={true} />
+          
+          <Link 
+            href="/login" 
+            className="bg-white text-[#2d4a2a] px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition text-sm shadow-sm"
+          >
+            Sign In
+          </Link>
+        </nav>
+      </div>
+      
       {/* Hero Section */}
       <main className="flex-1 flex flex-col items-center justify-center text-center p-8 max-w-4xl mx-auto space-y-8">
         

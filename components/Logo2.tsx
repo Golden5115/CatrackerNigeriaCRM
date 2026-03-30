@@ -14,7 +14,7 @@ export default function Logo({ className = "", textClassName = "", showText = tr
       
       {/* Pulls directly from your /public/logo.png file */}
       <img 
-        src="/logo.png" 
+        src="/logo2.png" 
         alt="Company Logo" 
         className="h-20 w-auto object-contain" 
       /> 
