@@ -2,9 +2,6 @@
 
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-
-
 
 export async function markPaymentAsDone(formData: FormData) {
   const jobId = formData.get('jobId') as string
@@ -15,12 +12,16 @@ export async function markPaymentAsDone(formData: FormData) {
     where: { id: jobId },
     data: {
       paymentStatus: 'PAID',
-      amountPaid: parseFloat(amount), // Save the money
-      paymentCollector: collector,    // Save who took it
-      status: 'ACTIVE' // Move to Active status if payment was the last step
+      amountPaid: parseFloat(amount), 
+      paymentCollector: collector,    
+      // 🛑 FIX: We removed `status: 'ACTIVE'` from here. 
+      // Payment should never alter the pipeline timeline!
     }
   })
 
+  // Refresh all relevant pages
   revalidatePath('/dashboard/payments')
   revalidatePath('/dashboard/clients')
+  revalidatePath('/dashboard/revenue')
+  revalidatePath('/dashboard')
 }

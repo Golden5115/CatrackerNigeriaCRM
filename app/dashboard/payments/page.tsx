@@ -13,7 +13,9 @@ async function PaymentsList() {
   const jobs = await prisma.job.findMany({
     where: { 
       paymentStatus: { not: 'PAID' },
-      status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE'] }
+      // 🛑 THE FIX: Strictly limit to jobs that are ACTIVE and ONBOARDED
+      status: 'ACTIVE',
+      onboarded: true
     },
     include: {
       vehicle: { include: { client: true } }
@@ -95,13 +97,11 @@ async function PaymentsList() {
 export default function PaymentsPage() {
   return (
     <div>
-      {/* 🟢 HEADER LOADS INSTANTLY */}
       <div className="mb-4">
          <h2 className="text-3xl font-bold text-gray-800">Payment Collections</h2>
          <p className="text-gray-500">Track outstanding balances and record receipts.</p>
       </div>
 
-      {/* 🟢 LIST SHOWS SPINNER WHILE WAITING */}
       <Suspense fallback={
         <div className="mt-8 bg-white border border-gray-200 rounded-xl shadow-sm p-24 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="animate-spin text-[#84c47c]" size={40} />
