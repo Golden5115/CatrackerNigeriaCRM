@@ -2,7 +2,7 @@
 
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
-  CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label 
 } from 'recharts';
 
 const COLORS = ['#84c47c', '#f59e0b', '#ef4444']; // Green, Orange, Red
@@ -29,7 +29,7 @@ export default function DashboardCharts({ stats }: { stats: any }) {
       {/* Job Volume Bar Chart */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <h4 className="font-bold text-gray-800 mb-6">Job Completion Volume</h4>
-        <div className="h-[300px] w-full">
+        <div className="h-[320px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={jobData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
@@ -43,9 +43,12 @@ export default function DashboardCharts({ stats }: { stats: any }) {
       </div>
 
       {/* Leads Pie Chart */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
-        <h4 className="font-bold text-gray-800 mb-2">Lead Conversion Distribution</h4>
-        <div className="flex-1 h-[300px] w-full relative">
+      {/* 👇 FIX: Removed "flex flex-col" from this parent div */}
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <h4 className="font-bold text-gray-800 mb-6">Lead Conversion Distribution</h4>
+        
+        {/* 👇 FIX: Removed "flex-1" and strictly enforced height so mobile doesn't collapse it */}
+        <div className="h-[320px] w-full relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -61,16 +64,27 @@ export default function DashboardCharts({ stats }: { stats: any }) {
                 {leadData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
+                
+                <Label
+                  content={({ viewBox }: any) => {
+                    const { cx, cy } = viewBox;
+                    return (
+                      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central">
+                        <tspan x={cx} y={cy - 5} className="fill-gray-800 text-3xl font-bold">
+                          {stats.totalLeads}
+                        </tspan>
+                        <tspan x={cx} y={cy + 20} className="fill-gray-400 text-xs font-bold uppercase tracking-wider">
+                          Total Leads
+                        </tspan>
+                      </text>
+                    );
+                  }}
+                />
               </Pie>
               <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}/>
-              <Legend verticalAlign="bottom" height={36}/>
+              <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: "20px" }} />
             </PieChart>
           </ResponsiveContainer>
-          
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
-            <span className="text-3xl font-bold text-gray-800">{stats.totalLeads}</span>
-            <span className="text-xs font-bold text-gray-400 uppercase">Total Leads</span>
-          </div>
         </div>
       </div>
 

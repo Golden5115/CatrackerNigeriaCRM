@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, Users, Server, 
   Smartphone, CreditCard, Shield, Briefcase, LogOut, Package, User, Lock, 
-  TrendingUp, Menu, X
+  TrendingUp, Menu, X, Wrench
 } from "lucide-react";
 import Logo from "./Logo";
 import SearchInput from "./SearchInput";
@@ -16,6 +16,10 @@ const allMenuItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard, requiredModule: null }, 
   { name: "My Profile", href: "/dashboard/profile", icon: User, requiredModule: null },
   { name: "Sales Pipeline", href: "/dashboard/leads", icon: Users, requiredModule: "/dashboard/leads" },
+  
+  // 👇 NEW SUPPORT MODULE
+  { name: "Support Tickets", href: "/dashboard/support", icon: Wrench, requiredModule: null },
+  
   { name: "Inventory", href: "/dashboard/inventory", icon: Package, requiredModule: "/dashboard/inventory" },
   { name: "Tech Support", href: "/dashboard/tech", icon: Server, requiredModule: "/dashboard/tech" },
   { name: "Client Onboarding", href: "/dashboard/activation", icon: Smartphone, requiredModule: "/dashboard/activation" },
@@ -24,7 +28,6 @@ const allMenuItems = [
   { name: "Revenue Analysis", href: "/dashboard/revenue", icon: TrendingUp, adminOnly: true },
   { name: "Team & Roles", href: "/dashboard/users", icon: Shield, adminOnly: true }, 
 ];
-
 export default function Sidebar({ 
   userRole = 'STAFF', 
   accessibleModules = [] 

@@ -18,7 +18,8 @@ export default function LogSupportTicket() {
     if (res?.error) {
       setError(res.error)
     } else {
-      router.push('/dashboard/leads')
+      // 👇 FIX 1: Redirect to the new Support module instead of Sales Pipeline
+      router.push('/dashboard/support')
     }
   }
 
@@ -32,8 +33,9 @@ export default function LogSupportTicket() {
           </h2>
           <p className="text-gray-500 mt-1">Record a client issue and dispatch an installer.</p>
         </div>
-        <Link href="/dashboard/leads" className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-800 transition">
-          <ArrowLeft size={16} /> Back to Pipeline
+        {/* 👇 FIX 2: Point the back button to the Support module */}
+        <Link href="/dashboard/support" className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-800 transition">
+          <ArrowLeft size={16} /> Back to Support Queue
         </Link>
       </div>
 
@@ -54,7 +56,7 @@ export default function LogSupportTicket() {
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Phone Number</label>
               <input name="phoneNumber" required placeholder="e.g. 08012345678" className="w-full p-3 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition" />
-              <p className="text-[10px] text-gray-400 mt-1">*If this number is already in the database, the ticket will be attached to their existing profile.</p>
+              <p className="text-[10px] text-gray-400 mt-1">*If this is a legacy client not yet in the system, a new profile will be auto-generated for them.</p>
             </div>
           </div>
 
@@ -66,7 +68,7 @@ export default function LogSupportTicket() {
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Type of Support Needed</label>
             <select name="jobType" required className="w-full p-3 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition font-medium">
-              <option value="MAINTENANCE">🟠 General Maintenance / Physical Checkup</option>
+              <option value="MAINTENANCE">🟢 General Maintenance / Physical Checkup</option>
               <option value="DEVICE_REPLACEMENT">🔴 Device Replacement (Swap Tracker)</option>
               <option value="SIM_REPLACEMENT">🟣 SIM Replacement (Network Issue)</option>
               <option value="TRANSFER">🔵 Transfer (Move tracker to new car)</option>
