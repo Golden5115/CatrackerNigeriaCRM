@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import Link from "next/link";
-import { Suspense } from "react"; // 👈 NEW: Import Suspense
+import { Suspense } from "react";
 import { 
   Car, AlertCircle, CheckCircle, MailWarning, 
   Wrench, Pencil, Trash2, Smartphone, 
@@ -9,14 +9,14 @@ import {
 import { verifySession } from "@/lib/session"
 import DeleteClientButton from "@/components/DeleteClientButton";
 import SortControl from "@/components/SortControl"; 
+import LocalSearchInput from "@/components/LocalSearchInput";
 
 export const dynamic = 'force-dynamic';
 
 // ==========================================
 // 1. THE DATA COMPONENT (Loads in background)
 // ==========================================
-async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdit: boolean, canDelete: boolean }) {
-  // Determine Sorting Logic
+async function ClientsTable({ sort, query, canEdit, canDelete }: { sort: string, query: string, canEdit: boolean, canDelete: boolean }) {
   let orderBy = {};
   switch (sort) {
     case 'name_asc': orderBy = { fullName: 'asc' }; break;
@@ -25,9 +25,15 @@ async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdi
     case 'date_desc': default: orderBy = { createdAt: 'desc' }; break;
   }
 
-  // Fetch Clients
   const clients = await prisma.client.findMany({
     where: {
+      ...(query ? {
+        OR: [
+          { fullName: { contains: query, mode: 'insensitive' } },
+          { phoneNumber: { contains: query } },
+          { vehicles: { some: { plateNumber: { contains: query, mode: 'insensitive' } } } }
+        ]
+      } : {}),
       vehicles: {
         some: { jobs: { some: { status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE', 'LEAD_LOST'] } } } }
       }
@@ -54,10 +60,8 @@ async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdi
           </thead>
           <tbody className="divide-y divide-gray-200">
             {clients.map((client) => {
-              // --- FINANCIAL CALCULATION ---
               const totalPaid = client.vehicles.reduce((sum, v) => sum + (v.jobs[0]?.amountPaid ? Number(v.jobs[0].amountPaid) : 0), 0);
 
-              // --- CONFIG DATE LOGIC ---
               const configDates = client.vehicles
                 .map(v => v.jobs[0]?.configurationDate)
                 .filter(d => d != null)
@@ -65,7 +69,6 @@ async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdi
               
               const lastConfigDate = configDates.length > 0 ? new Date(configDates[0]!).toLocaleDateString('en-GB') : 'Pending';
 
-              // --- STATUS LOGIC ---
               const unpaidCount = client.vehicles.filter(v => v.jobs.some(j => j.status === 'ACTIVE' && j.paymentStatus !== 'PAID')).length;
               const techQueueCount = client.vehicles.filter(v => v.jobs.some(j => j.status === 'PENDING_QC')).length;
               const onboardingCount = client.vehicles.filter(v => v.jobs.some(j => j.status === 'CONFIGURED' && !j.onboarded)).length;
@@ -74,13 +77,11 @@ async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdi
 
               return (
                 <tr key={client.id} className="hover:bg-gray-50 group transition">
-                  {/* 1. Client Info */}
                   <td className="px-6 py-4">
                     <div className="font-bold text-gray-900">{client.fullName}</div>
                     <div className="text-xs text-gray-500">{client.phoneNumber}</div>
                   </td>
                   
-                  {/* 2. Fleet Info */}
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">
                       <Car size={12} /> {client.vehicles.length} Vehicle(s)
@@ -88,14 +89,12 @@ async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdi
                     <div className="text-xs text-gray-400 mt-1 truncate max-w-[150px]">{client.vehicles.map(v => v.name).join(", ")}</div>
                   </td>
 
-                  {/* 3. Configuration Date */}
                   <td className="px-6 py-4">
                     <div className={`text-xs px-2 py-1 rounded border w-fit font-medium flex items-center gap-1 ${lastConfigDate === 'Pending' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
                        <Smartphone size={10} /> {lastConfigDate}
                     </div>
                   </td>
 
-                  {/* 4. Financials */}
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-green-700">₦{totalPaid.toLocaleString()}</span>
@@ -103,7 +102,6 @@ async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdi
                     </div>
                   </td>
 
-                  {/* 5. Alerts */}
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1 items-start">
                       {unpaidCount > 0 && <Link href="/dashboard/payments" className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase"><AlertCircle size={10} /> {unpaidCount} Due</Link>}
@@ -114,7 +112,6 @@ async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdi
                     </div>
                   </td>
 
-                  {/* 6. Actions */}
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end items-center gap-2">
                       {canEdit && <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg"><Pencil size={18} /></Link>}
@@ -128,7 +125,7 @@ async function ClientsTable({ sort, canEdit, canDelete }: { sort: string, canEdi
           </tbody>
         </table>
         
-        {clients.length === 0 && <div className="p-12 text-center text-gray-500">No active clients found.</div>}
+        {clients.length === 0 && <div className="p-12 text-center text-gray-500">No clients found matching your search.</div>}
       </div>
     </div>
   );
@@ -145,8 +142,8 @@ export default async function ClientsPage({
 }) {
   const params = await searchParams;
   const sort = (params.sort as string) || 'date_desc';
+  const query = (params.query as string) || '';
 
-  // Fetch session fast
   const session = await verifySession() 
   const userId = typeof session?.userId === 'string' ? session.userId : "";
   const currentUser = await prisma.user.findUnique({ where: { id: userId } });
@@ -157,25 +154,24 @@ export default async function ClientsPage({
   return (
     <div className="space-y-6">
       
-      {/* 🟢 THIS LOADS INSTANTLY SO THE APP FEELS FAST */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
            <h2 className="text-3xl font-bold text-gray-800">Client Database</h2>
            <p className="text-gray-500">Manage active clients, monitor financials and fleet status.</p>
         </div>
-        <div className="w-full md:w-48">
-          <SortControl />
+        <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-3">
+          <LocalSearchInput placeholder="Search clients or plates..." />
+          <SortControl currentSort={sort} />
         </div>
       </div>
 
-      {/* 🟢 THIS SHOWS A SPINNER WHILE WAITING FOR THE DB */}
       <Suspense fallback={
         <div className="bg-white border rounded-xl shadow-sm p-24 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="animate-spin text-[#84c47c]" size={40} />
           <p className="text-gray-400 font-medium animate-pulse">Loading client records...</p>
         </div>
       }>
-        <ClientsTable sort={sort} canEdit={canEdit} canDelete={canDelete} />
+        <ClientsTable sort={sort} query={query} canEdit={canEdit} canDelete={canDelete} />
       </Suspense>
 
     </div>

@@ -1,7 +1,7 @@
 import { verifySession } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link";
-import { Suspense } from "react"; // 👈 NEW: Import Suspense
+import { Suspense } from "react";
 import { 
   Phone, Car, Plus, Clock, Calendar, Pencil, Hash, Wrench, 
   AlertCircle, XCircle, Loader2
@@ -9,6 +9,7 @@ import {
 import LeadActionMenu from "@/components/LeadActionMenu";
 import SortControl from "@/components/SortControl"; 
 import DeleteClientButton from "@/components/DeleteClientButton";
+import LocalSearchInput from "@/components/LocalSearchInput";
 
 export const dynamic = 'force-dynamic';
 
@@ -16,9 +17,9 @@ export const dynamic = 'force-dynamic';
 // 1. THE DATA COMPONENT (Loads in background)
 // ==========================================
 async function LeadsTable({ 
-  sort, userId, userRole, canEdit, canDelete 
+  sort, query, userId, userRole, canEdit, canDelete 
 }: { 
-  sort: string, userId: string, userRole?: string, canEdit: boolean, canDelete: boolean 
+  sort: string, query: string, userId: string, userRole?: string, canEdit: boolean, canDelete: boolean 
 }) {
   
   // Sort Logic
@@ -30,9 +31,16 @@ async function LeadsTable({
     case 'date_desc': default: orderBy = { createdAt: 'desc' }; break;
   }
 
-  // Fetch Logic
+  // Fetch Logic (Now includes Search Query)
   const clients = await prisma.client.findMany({
     where: {
+      ...(query ? {
+        OR: [
+          { fullName: { contains: query, mode: 'insensitive' } },
+          { phoneNumber: { contains: query } },
+          { vehicles: { some: { plateNumber: { contains: query, mode: 'insensitive' } } } }
+        ]
+      } : {}),
       vehicles: {
         some: {
           jobs: { some: { status: { in: ['NEW_LEAD', 'SCHEDULED', 'IN_PROGRESS', 'LEAD_LOST'] } } }
@@ -65,12 +73,10 @@ async function LeadsTable({
           <tbody className="divide-y divide-gray-100 bg-white">
             {clients.map((client) => {
               
-              // 1. FILTER: Get active vehicles
               const activeVehicles = client.vehicles.filter(v => 
                 ['NEW_LEAD', 'SCHEDULED', 'IN_PROGRESS', 'LEAD_LOST'].includes(v.jobs[0]?.status)
               );
 
-              // 2. RENDER ROWS
               return activeVehicles.map((vehicle, index) => {
                 const job = vehicle.jobs[0];
                 const dateAdded = new Date(client.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -184,7 +190,7 @@ async function LeadsTable({
                             installerId={job.installerId}
                             currentUserId={userId}
                             vehicleName={vehicle.name}
-                            installerName={job.installer?.fullName}
+                            installerName={job.installerName}
                             currentUserRole={userRole}
                           />
                         </div>
@@ -197,7 +203,7 @@ async function LeadsTable({
           </tbody>
         </table>
         
-        {clients.length === 0 && <div className="p-12 text-center text-gray-500">No active leads or tickets in pipeline.</div>}
+        {clients.length === 0 && <div className="p-12 text-center text-gray-500">No leads found matching your search.</div>}
       </div>
     </div>
   );
@@ -213,8 +219,8 @@ export default async function LeadsPage({
 }) {
   const params = await searchParams;
   const sort = (params.sort as string) || 'date_desc';
+  const query = (params.query as string) || '';
 
-  // 🟢 Load session fast
   const session = await verifySession() 
   const userId = typeof session?.userId === 'string' ? session.userId : "";
   const userRole = typeof session?.role === 'string' ? session.role : undefined;
@@ -226,8 +232,6 @@ export default async function LeadsPage({
 
   return (
     <div className="space-y-6">
-      
-      {/* 🟢 HEADER LOADS INSTANTLY */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold text-gray-800">Sales & Support Pipeline</h2>
@@ -248,18 +252,18 @@ export default async function LeadsPage({
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex flex-col md:flex-row justify-end items-end md:items-center gap-3">
+        <LocalSearchInput placeholder="Search name, phone, plate..." />
         <SortControl currentSort={sort} />
       </div>
 
-      {/* 🟢 SPINNER SHOWS WHILE WAITING FOR DATABASE */}
       <Suspense fallback={
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-24 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="animate-spin text-[#84c47c]" size={40} />
           <p className="text-gray-400 font-medium animate-pulse">Loading sales pipeline...</p>
         </div>
       }>
-        <LeadsTable sort={sort} userId={userId} userRole={userRole} canEdit={canEdit} canDelete={canDelete} />
+        <LeadsTable sort={sort} query={query} userId={userId} userRole={userRole} canEdit={canEdit} canDelete={canDelete} />
       </Suspense>
 
     </div>

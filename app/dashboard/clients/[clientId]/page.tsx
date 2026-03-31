@@ -8,7 +8,6 @@ import {
 export default async function ClientDetailsPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
 
-  // 👇 FIX 1: Updated the database query to include simCard and installer
   const client = await prisma.client.findUnique({
     where: { id: clientId },
     include: {
@@ -17,13 +16,13 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
           jobs: {
             include: { 
               device: true,
-              simCard: true,  // <--- Added this
-              installer: true // <--- Added this
+              simCard: true,  
+              installer: true 
             } 
           }
         }
       },
-      createdBy: true // To see who added the lead originally
+      createdBy: true 
     }
   });
 
@@ -59,14 +58,12 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
       </div>
 
       {/* 2. VEHICLE FLEET CARDS */}
-     {/* 2. VEHICLE FLEET CARDS */}
       <div>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <Car className="text-[#2d4a2a]" /> Vehicle Fleet & Configuration
           </h2>
           
-          {/* 👇 NEW: Add Vehicle Button for Returning Clients */}
           <Link 
             href={`/dashboard/clients/${client.id}/add-vehicle`}
             className="bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition shadow-sm flex items-center gap-2"
@@ -79,7 +76,7 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
            {client.vehicles.map((vehicle) => {
               const job = vehicle.jobs[0];
               const device = job?.device;
-              const simCard = job?.simCard; // <--- Extract SimCard
+              const simCard = job?.simCard; 
               const configDate = job?.configurationDate ? new Date(job.configurationDate).toLocaleDateString() : "Pending";
               const paidAmount = job?.amountPaid ? Number(job.amountPaid) : 0;
 
@@ -113,7 +110,6 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                         </div>
                         <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
                           <span className="text-purple-600 text-xs block mb-1">Sim Number</span>
-                          {/* 👇 FIX 2: Pull sim number from the simCard object */}
                           <div className="font-mono font-bold text-gray-800">{simCard?.simNumber || "---"}</div>
                         </div>
                       </div>
@@ -123,9 +119,11 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                         <span className="font-medium text-gray-900">{configDate}</span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
-                        {/* 👇 FIX 3: Pull the real user name from the installer relationship */}
+                        {/* 👇 FIX: Show the manually typed name, fallback to account name, fallback to System Admin */}
                         <span className="text-gray-500 flex items-center gap-2"><User size={14}/> Installed By:</span>
-                        <span className="font-medium text-gray-900">{job?.installer?.fullName || "System Admin"}</span>
+                        <span className="font-medium text-gray-900">
+                          {job?.installerName || job?.installer?.fullName || "System Admin"}
+                        </span>
                       </div>
                     </div>
 
