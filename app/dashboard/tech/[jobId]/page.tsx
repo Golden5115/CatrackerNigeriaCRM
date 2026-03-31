@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { notFound, redirect } from "next/navigation"
 import SubmitButton from "@/components/SubmitButton"
-import { CheckCircle, Car, User, ArrowLeft, ShieldCheck, Hash, Wrench } from "lucide-react"
+import { CheckCircle, Car, User, ArrowLeft, ShieldCheck, Hash, Wrench, XCircle, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { revalidatePath } from "next/cache"
 
@@ -12,7 +12,7 @@ export default async function TechVerificationPage({
 }) {
   const { jobId } = await params;
   
-  // 1. Fetch the Job, including the Installer and Devices
+  // 1. Fetch the Job
   const job = await prisma.job.findUnique({
     where: { id: jobId },
     include: {
@@ -27,14 +27,15 @@ export default async function TechVerificationPage({
 
   const isMaintenance = job.jobType === 'MAINTENANCE'
 
-  // 2. Inline Server Action: Approve the job
+  // ==========================================
+  // ACTION 1: APPROVE JOB
+  // ==========================================
   async function verifyAndSaveJob(formData: FormData) {
     'use server'
     const imei = formData.get('imei') as string | null
     const simNumber = formData.get('simNumber') as string | null
     const plateNumber = formData.get('plateNumber') as string
     
-    // 👇 FIX 1: Safely update Device/SIM ONLY if the fields were actually submitted
     if (job?.deviceId && imei) {
        await prisma.device.update({ where: { id: job.deviceId }, data: { imei } })
     }
@@ -42,12 +43,10 @@ export default async function TechVerificationPage({
        await prisma.simCard.update({ where: { id: job.simCardId }, data: { simNumber } })
     }
     
-    // Update Vehicle Plate Number if corrected
     if (job?.vehicleId && plateNumber) {
        await prisma.vehicle.update({ where: { id: job.vehicleId }, data: { plateNumber } })
     }
 
-    // 👇 FIX 2: Smart Routing. Maintenance goes straight to ACTIVE. Others go to Onboarding.
     const nextStatus = job?.jobType === 'MAINTENANCE' ? 'ACTIVE' : 'CONFIGURED'
 
     await prisma.job.update({
@@ -55,7 +54,8 @@ export default async function TechVerificationPage({
       data: {
         status: nextStatus,
         configurationDate: new Date(),
-        serverConfig: true
+        serverConfig: true,
+        supportNotes: null // Clear any previous rejection notes!
       }
     })
     
@@ -65,8 +65,42 @@ export default async function TechVerificationPage({
     redirect('/dashboard/tech') 
   }
 
+  // ==========================================
+  // ACTION 2: REJECT JOB (NEW!)
+  // ==========================================
+  async function rejectJob(formData: FormData) {
+    'use server'
+    const reason = formData.get('reason') as string
+
+    await prisma.$transaction(async (tx) => {
+      // A. Free the hardware back to inventory
+      if (job?.deviceId) {
+        await tx.device.update({ where: { id: job.deviceId }, data: { status: 'IN_STOCK' } })
+      }
+      if (job?.simCardId) {
+        await tx.simCard.update({ where: { id: job.simCardId }, data: { status: 'IN_STOCK' } })
+      }
+
+      // B. Send job back to Installer and wipe the hardware links
+      await tx.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'IN_PROGRESS', // Back to the pipeline!
+          deviceId: null,        // Unlink the wrong device
+          simCardId: null,       // Unlink the wrong SIM
+          supportNotes: `TECH REJECTION: ${reason}` // Tell them why
+        }
+      })
+    })
+
+    revalidatePath('/dashboard/tech')
+    revalidatePath('/dashboard/leads')
+    revalidatePath('/dashboard/inventory')
+    redirect('/dashboard/tech') 
+  }
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
       <div className="flex items-center gap-4 mb-6">
         <Link href="/dashboard/tech" className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition">
           <ArrowLeft size={20} className="text-gray-600" />
@@ -95,13 +129,12 @@ export default async function TechVerificationPage({
 
         {/* Verification Form */}
         <form action={verifyAndSaveJob} className="p-6 space-y-6">
-           <div className="bg-orange-50 text-orange-800 p-4 rounded-xl text-sm flex items-start gap-3 border border-orange-100">
-              <ShieldCheck size={24} className="shrink-0 mt-0.5 text-orange-600" />
+           <div className="bg-green-50 text-green-800 p-4 rounded-xl text-sm flex items-start gap-3 border border-green-100">
+              <ShieldCheck size={24} className="shrink-0 mt-0.5 text-green-600" />
               <p>Please confirm the vehicle is actively reporting online on the tracking server before approving this ticket.</p>
            </div>
 
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             {/* Plate Number is ALWAYS visible */}
              <div>
                <label className="block text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
                  <Hash size={14}/> Plate / Chassis
@@ -110,11 +143,10 @@ export default async function TechVerificationPage({
                  name="plateNumber" 
                  defaultValue={job.vehicle.plateNumber || ""} 
                  required 
-                 className="w-full p-4 border rounded-xl font-mono text-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition" 
+                 className="w-full p-4 border rounded-xl font-mono text-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500 outline-none transition" 
                />
              </div>
 
-             {/* 👇 FIX 3: Hide Hardware Inputs if it is just Maintenance */}
              {!isMaintenance && (
                <>
                  <div>
@@ -123,7 +155,7 @@ export default async function TechVerificationPage({
                      name="imei" 
                      defaultValue={job.device?.imei} 
                      required 
-                     className="w-full p-4 border rounded-xl font-mono text-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition" 
+                     className="w-full p-4 border rounded-xl font-mono text-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500 outline-none transition" 
                    />
                  </div>
                  
@@ -133,16 +165,16 @@ export default async function TechVerificationPage({
                      name="simNumber" 
                      defaultValue={job.simCard?.simNumber} 
                      required 
-                     className="w-full p-4 border rounded-xl font-mono text-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition" 
+                     className="w-full p-4 border rounded-xl font-mono text-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500 outline-none transition" 
                    />
                  </div>
                </>
              )}
            </div>
 
-           <div className="pt-4 mt-6">
+           <div className="pt-4 mt-6 border-b pb-8">
              {isMaintenance ? (
-               <SubmitButton className="w-full bg-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-orange-600 shadow-lg flex justify-center items-center gap-2 transition">
+               <SubmitButton className="w-full bg-[#84c47c] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#6aa663] shadow-lg flex justify-center items-center gap-2 transition">
                  <Wrench size={24} /> Verify Online & Close Maintenance Ticket
                </SubmitButton>
              ) : (
@@ -152,6 +184,32 @@ export default async function TechVerificationPage({
              )}
            </div>
         </form>
+
+        {/* REJECTION FORM */}
+        <form action={rejectJob} className="p-6 bg-red-50/50">
+           <h3 className="text-red-800 font-bold flex items-center gap-2 mb-4">
+             <AlertTriangle size={20} /> Hardware Issue?
+           </h3>
+           <p className="text-sm text-red-600 mb-4">
+             If the IMEI or SIM card is incorrect and the device is not coming online, reject this ticket. The hardware will be returned to inventory, and the installer will be forced to rescan the correct items.
+           </p>
+
+           <div className="flex flex-col md:flex-row gap-4">
+             <input 
+               name="reason" 
+               required 
+               placeholder="Reason for rejection (e.g., 'Device offline, check IMEI')" 
+               className="flex-1 p-3 border border-red-200 rounded-xl bg-white focus:ring-2 focus:ring-red-500 outline-none transition"
+             />
+             <SubmitButton 
+                className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition shadow-md whitespace-nowrap"
+                loadingText="Rejecting..."
+             >
+                <XCircle size={18} className="inline mr-2" /> Reject to Installer
+             </SubmitButton>
+           </div>
+        </form>
+
       </div>
     </div>
   )
