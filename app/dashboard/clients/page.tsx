@@ -60,12 +60,12 @@ async function ClientsTable({
           
           <thead className="bg-gray-50 hidden md:table-header-group">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Client Info</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Fleet Status</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Config Date</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Financials</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Alerts</th>
-              <th className="px-6 py-3 text-right">Actions</th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase">Client Info</th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase">Fleet Status</th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase">Config Date</th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase">Financials</th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase">Alerts</th>
+              <th className="px-4 py-3 text-right text-[11px] font-bold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
 
@@ -89,35 +89,35 @@ async function ClientsTable({
                   {/* ========================================== */}
                   {/* 📱 MOBILE CARD VIEW */}
                   {/* ========================================== */}
-                  <tr className="md:hidden block p-4 border-b border-gray-50">
+                  <tr className="md:hidden block p-3 border-b border-gray-50">
                     <td className="block">
-                      <div className="flex justify-between items-start mb-3">
+                      <div className="flex justify-between items-start mb-2">
                         <div>
-                          <div className="font-bold text-gray-900 text-lg">{client.fullName}</div>
-                          <div className="text-sm text-gray-500 font-medium mt-0.5">{client.phoneNumber}</div>
+                          <div className="font-bold text-gray-900 text-sm">{client.fullName}</div>
+                          <div className="text-[11px] text-gray-500 font-medium mt-0.5">{client.phoneNumber}</div>
                         </div>
                         <div className="flex items-center gap-1">
-                          {canEdit && <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-2"><Pencil size={18} /></Link>}
-                          <Link href={`/dashboard/clients/${client.id}`} className="text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded-lg text-sm">View</Link>
+                          {canEdit && <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-1.5"><Pencil size={14} /></Link>}
+                          <Link href={`/dashboard/clients/${client.id}`} className="text-blue-600 font-bold bg-blue-50 px-2.5 py-1 rounded-lg text-xs">View</Link>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="grid grid-cols-2 gap-2 mb-2">
                          <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                           <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Fleet Size</span>
-                           <div className="text-sm font-bold text-gray-800 flex items-center gap-1"><Car size={14}/> {client.vehicles.length} Vehicles</div>
+                           <span className="text-[9px] text-gray-400 font-bold uppercase block mb-1">Fleet Size</span>
+                           <div className="text-xs font-bold text-gray-800 flex items-center gap-1"><Car size={12}/> {client.vehicles.length} Vehicles</div>
                          </div>
                          <div className="bg-green-50 p-2 rounded-lg border border-green-100">
-                           <span className="text-[10px] text-green-600 font-bold uppercase block mb-1">Total Paid</span>
-                           <div className="text-sm font-bold text-green-800">₦{totalPaid.toLocaleString()}</div>
+                           <span className="text-[9px] text-green-600 font-bold uppercase block mb-1">Total Paid</span>
+                           <div className="text-xs font-bold text-green-800">₦{totalPaid.toLocaleString()}</div>
                          </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 items-center">
-                        {unpaidCount > 0 && <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-bold uppercase"><AlertCircle size={10} /> {unpaidCount} Due</span>}
-                        {techQueueCount > 0 && <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-bold uppercase"><Wrench size={10} /> {techQueueCount} In Tech</span>}
-                        {onboardingCount > 0 && <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-bold uppercase"><MailWarning size={10} /> Login</span>}
-                        {isAllClear && <span className="inline-flex items-center gap-1 text-green-600 text-[10px] font-bold uppercase px-1"><CheckCircle size={12} /> All Clear</span>}
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        {unpaidCount > 0 && <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"><AlertCircle size={10} /> {unpaidCount} Due</span>}
+                        {techQueueCount > 0 && <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"><Wrench size={10} /> {techQueueCount} In Tech</span>}
+                        {onboardingCount > 0 && <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"><MailWarning size={10} /> Login</span>}
+                        {isAllClear && <span className="inline-flex items-center gap-1 text-green-600 text-[9px] font-bold uppercase px-1"><CheckCircle size={10} /> All Clear</span>}
                       </div>
                     </td>
                   </tr>
@@ -126,34 +126,34 @@ async function ClientsTable({
                   {/* 💻 DESKTOP TABLE VIEW */}
                   {/* ========================================== */}
                   <tr className="hidden md:table-row hover:bg-gray-50 group transition">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900">{client.fullName}</div>
-                      <div className="text-xs text-gray-500">{client.phoneNumber}</div>
+                    <td className="px-4 py-3">
+                      <div className="font-bold text-sm text-gray-900">{client.fullName}</div>
+                      <div className="text-[11px] text-gray-500">{client.phoneNumber}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold"><Car size={12} /> {client.vehicles.length} Vehicle(s)</span>
-                      <div className="text-xs text-gray-400 mt-1 truncate max-w-[150px]">{client.vehicles.map(v => v.name).join(", ")}</div>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[11px] font-bold"><Car size={10} /> {client.vehicles.length} Vehicle(s)</span>
+                      <div className="text-[10px] text-gray-400 mt-1 truncate max-w-[150px]">{client.vehicles.map(v => v.name).join(", ")}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className={`text-xs px-2 py-1 rounded border w-fit font-medium flex items-center gap-1 ${lastConfigDate === 'Pending' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700 border-blue-100'}`}><Smartphone size={10} /> {lastConfigDate}</div>
+                    <td className="px-4 py-3">
+                      <div className={`text-[11px] px-1.5 py-0.5 rounded border w-fit font-medium flex items-center gap-1 ${lastConfigDate === 'Pending' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700 border-blue-100'}`}><Smartphone size={10} /> {lastConfigDate}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col"><span className="text-sm font-bold text-green-700">₦{totalPaid.toLocaleString()}</span><span className="text-[10px] text-gray-400 uppercase tracking-wide">Total Paid</span></div>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col"><span className="text-xs font-bold text-green-700">₦{totalPaid.toLocaleString()}</span><span className="text-[9px] text-gray-400 uppercase tracking-wide">Total Paid</span></div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex flex-col gap-1 items-start">
-                        {unpaidCount > 0 && <Link href="/dashboard/payments" className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase"><AlertCircle size={10} /> {unpaidCount} Due</Link>}
-                        {techQueueCount > 0 && <Link href="/dashboard/tech" className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase"><Wrench size={10} /> {techQueueCount} In Tech</Link>}
-                        {onboardingCount > 0 && <Link href="/dashboard/activation" className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase"><MailWarning size={10} /> Needs Login</Link>}
-                        {isAllClear && <span className="inline-flex items-center gap-1 text-green-600 text-xs font-medium"><CheckCircle size={12} /> All Clear</span>}
-                        {isLostProspect && <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-[10px] font-bold uppercase border"><XCircle size={10} /> Lost Prospect</span>}
+                        {unpaidCount > 0 && <Link href="/dashboard/payments" className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase"><AlertCircle size={10} /> {unpaidCount} Due</Link>}
+                        {techQueueCount > 0 && <Link href="/dashboard/tech" className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase"><Wrench size={10} /> {techQueueCount} In Tech</Link>}
+                        {onboardingCount > 0 && <Link href="/dashboard/activation" className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase"><MailWarning size={10} /> Needs Login</Link>}
+                        {isAllClear && <span className="inline-flex items-center gap-1 text-green-600 text-[10px] font-medium"><CheckCircle size={10} /> All Clear</span>}
+                        {isLostProspect && <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase border"><XCircle size={8} /> Lost Prospect</span>}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end items-center gap-2">
-                        {canEdit && <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg"><Pencil size={18} /></Link>}
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end items-center gap-1">
+                        {canEdit && <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-1.5 hover:bg-blue-50 rounded-lg"><Pencil size={14} /></Link>}
                         {canDelete && <DeleteClientButton clientId={client.id} />}
-                        <Link href={`/dashboard/clients/${client.id}`} className="text-blue-600 hover:text-blue-900 font-medium text-sm border border-blue-200 px-3 py-1 rounded hover:bg-blue-50 ml-2">View</Link>
+                        <Link href={`/dashboard/clients/${client.id}`} className="text-blue-600 hover:text-blue-900 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 ml-1">View</Link>
                       </div>
                     </td>
                   </tr>
@@ -162,7 +162,7 @@ async function ClientsTable({
             })}
           </tbody>
         </table>
-        {clients.length === 0 && <div className="p-12 text-center text-gray-500">No clients found matching your search.</div>}
+        {clients.length === 0 && <div className="p-12 text-center text-sm text-gray-500">No clients found matching your search.</div>}
       </div>
       
       <Pagination totalPages={totalPages} currentPage={page} />
@@ -190,15 +190,13 @@ export default async function ClientsPage({
   return (
     <div className="space-y-6">
       
-      {/* 🟢 Responsive Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-           <h2 className="text-3xl font-bold text-gray-800">Client Database</h2>
-           <p className="text-gray-500">Manage active clients, monitor financials and fleet status.</p>
+           <h2 className="text-2xl font-bold text-gray-800">Client Database</h2>
+           <p className="text-sm text-gray-500">Manage active clients, monitor financials and fleet status.</p>
         </div>
       </div>
 
-      {/* 🟢 Responsive Search & Sort Block */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
         <div className="flex-1">
           <LocalSearchInput placeholder="Search clients or plates..." />
@@ -210,8 +208,8 @@ export default async function ClientsPage({
 
       <Suspense key={query + sort + page} fallback={
         <div className="bg-white border rounded-xl shadow-sm p-24 flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="animate-spin text-[#84c47c]" size={40} />
-          <p className="text-gray-400 font-medium animate-pulse">Loading database page {page}...</p>
+          <Loader2 className="animate-spin text-[#84c47c]" size={32} />
+          <p className="text-sm text-gray-400 font-medium animate-pulse">Loading database page {page}...</p>
         </div>
       }>
         <ClientsTable sort={sort} query={query} page={page} canEdit={canEdit} canDelete={canDelete} />
