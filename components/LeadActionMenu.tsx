@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useRef } from "react" // 👈 NEW: Imported useRef
 import { claimJob, submitInstallation, unclaimJob, markJobAsLost } from "@/app/actions/installer"
 import { processHardwareSwap, resolveMaintenanceJob } from "@/app/actions/support"
-import { MoreVertical, CheckCircle, Lock, Wrench, X, Loader2, RotateCcw, AlertTriangle, XCircle, UserPlus } from "lucide-react"
+import { scheduleInstallation, logPendingReason } from "@/app/actions/updateLead"
+import { MoreVertical, CheckCircle, Lock, Wrench, X, Loader2, RotateCcw, AlertTriangle, XCircle, UserPlus, Calendar, AlertCircle } from "lucide-react"
 import SubmitButton from "@/components/SubmitButton"
 import InventorySearch from "./InventorySearch"
 
@@ -22,22 +23,51 @@ interface LeadActionMenuProps {
 export default function LeadActionMenu({ 
   jobId, currentStatus, jobType, vehicleId, installerId, currentUserId, vehicleName, installerName, currentUserRole 
 }: LeadActionMenuProps) {
+  
   const [isOpen, setIsOpen] = useState(false)
+  const [dropDirection, setDropDirection] = useState<'down' | 'up'>('down') // 👈 NEW: Tracks which way the menu should open
+  const buttonRef = useRef<HTMLButtonElement>(null) // 👈 NEW: Used to calculate screen space
+  
+  // Existing Modals
   const [showInstallModal, setShowInstallModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
   const [showLostModal, setShowLostModal] = useState(false)
-  const [showClaimModal, setShowClaimModal] = useState(false) // 👈 NEW: Dispatch Modal
-  const [manualInstallerName, setManualInstallerName] = useState("") // 👈 NEW: Manual Name State
+  const [showClaimModal, setShowClaimModal] = useState(false) 
   
+  // New Modals (Schedule & Pending)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [scheduleDate, setScheduleDate] = useState("")
+  const [showPendingModal, setShowPendingModal] = useState(false)
+  const [pendingReason, setPendingReason] = useState("")
+
+  const [manualInstallerName, setManualInstallerName] = useState("") 
   const [resolutionType, setResolutionType] = useState<'WIRING' | 'DEVICE' | 'SIM'>('WIRING')
+  
   const [isClaiming, setIsClaiming] = useState(false)
   const [isUnclaiming, setIsUnclaiming] = useState(false)
+
+  // 🛑 NEW: Smart Dropdown Positioning Logic
+  const toggleDropdown = () => {
+    if (!isOpen && buttonRef.current) {
+      // Calculate where the button is on the screen
+      const rect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      
+      // If there is less than 320px of space below the button, open upwards!
+      if (spaceBelow < 320) {
+        setDropDirection('up');
+      } else {
+        setDropDirection('down');
+      }
+    }
+    setIsOpen(!isOpen);
+  }
 
   // 1. HANDLE CLAIMING / DISPATCHING
   const handleClaim = async () => {
     setIsClaiming(true)
     try {
-      const res = await claimJob(jobId, manualInstallerName) // 👈 Pass the manual name!
+      const res = await claimJob(jobId, manualInstallerName) 
       if (res?.error) alert("Error: " + res.error)
     } catch (err) {
       alert("A critical system error occurred.")
@@ -64,7 +94,7 @@ export default function LeadActionMenu({
   // 3. SMART LOCK LOGIC
   const isAdminOrOps = currentUserRole === 'ADMIN' || currentUserRole === 'OPERATIONS'
   const isMyJob = installerId === currentUserId
-  const canManageJob = isMyJob || isAdminOrOps // Ops & Admins can manage ANY job
+  const canManageJob = isMyJob || isAdminOrOps 
 
   const isLocked = currentStatus === 'IN_PROGRESS' && !canManageJob
 
@@ -84,8 +114,8 @@ export default function LeadActionMenu({
   return (
     <div className={`relative ${isOpen ? 'z-50' : 'z-10'}`}>
       
-      {/* TRIGGER BUTTON */}
-      <button onClick={() => setIsOpen(!isOpen)} className="p-2 hover:bg-gray-100 rounded-full transition">
+      {/* 👈 FIX: Added ref and custom toggle function to the trigger button */}
+      <button ref={buttonRef} onClick={toggleDropdown} className="p-2 hover:bg-gray-100 rounded-full transition">
         <MoreVertical size={16} className="text-gray-500" />
       </button>
 
@@ -94,13 +124,26 @@ export default function LeadActionMenu({
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
           
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border z-20 overflow-hidden">
+          {/* 👈 FIX: The menu now dynamically switches between 'top-full mt-2' and 'bottom-full mb-2' */}
+          <div className={`absolute right-0 w-56 bg-white rounded-lg shadow-2xl border border-gray-100 z-20 overflow-hidden ${
+            dropDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
+          }`}>
             
            {/* UNCLAIMED JOBS */}
            {(currentStatus === 'NEW_LEAD' || currentStatus === 'SCHEDULED') && (
                <>
                  <button onClick={() => { setShowClaimModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-bold border-b border-gray-50">
                    <UserPlus size={16} /> Claim & Dispatch
+                 </button>
+
+                 {currentStatus === 'NEW_LEAD' && (
+                   <button onClick={() => { setShowScheduleModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-purple-600 hover:bg-purple-50 flex items-center gap-2 font-bold border-b border-gray-50">
+                     <Calendar size={16} /> Schedule Installation
+                   </button>
+                 )}
+
+                 <button onClick={() => { setShowPendingModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2 font-bold border-b border-gray-50">
+                   <AlertCircle size={16} /> Log Delay/Pending
                  </button>
                  
                  {isAdminOrOps && (
@@ -111,7 +154,7 @@ export default function LeadActionMenu({
                </>
             )}
 
-            {/* IN PROGRESS JOBS (Fixed Visibility) */}
+            {/* IN PROGRESS JOBS */}
             {currentStatus === 'IN_PROGRESS' && canManageJob && (
                <>
                  {jobType === 'NEW_INSTALL' ? (
@@ -129,7 +172,6 @@ export default function LeadActionMenu({
                    Return Job to Pool
                  </button>
 
-                 {/* 👇 FIX: Mark as lost is now available even if IN_PROGRESS */}
                  {isAdminOrOps && (
                    <button onClick={() => { setShowLostModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 font-bold">
                      <XCircle size={16} /> Mark as Lost
@@ -141,7 +183,12 @@ export default function LeadActionMenu({
         </>
       )}
 
-      {/* --- 1. CLAIM & DISPATCH MODAL (NEW) --- */}
+
+      {/* ========================================== */}
+      {/* ALL MODALS BELOW */}
+      {/* ========================================== */}
+
+      {/* --- 1. CLAIM & DISPATCH MODAL --- */}
       {showClaimModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
@@ -179,7 +226,74 @@ export default function LeadActionMenu({
         </div>
       )}
 
-      {/* --- 2. NEW INSTALLATION MODAL --- */}
+      {/* --- 2. SCHEDULE DATE MODAL --- */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                 <Calendar className="text-purple-500" /> Schedule Installation
+               </h3>
+               <button onClick={() => setShowScheduleModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Select the agreed date for this installation.</p>
+            <input 
+              type="date" 
+              value={scheduleDate} 
+              onChange={(e) => setScheduleDate(e.target.value)}
+              className="w-full p-3 border rounded-xl mb-4 text-sm outline-none focus:ring-2 focus:ring-purple-500 bg-gray-50"
+            />
+            <div className="pt-2">
+              <button 
+                onClick={async () => {
+                  if(!scheduleDate) return alert("Please select a date.");
+                  await scheduleInstallation(jobId, scheduleDate);
+                  setShowScheduleModal(false);
+                }} 
+                className="w-full py-3 font-bold bg-purple-600 text-white hover:bg-purple-700 rounded-xl transition"
+              >
+                Save Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- 3. PENDING REASON MODAL --- */}
+      {showPendingModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                 <AlertCircle className="text-amber-500" /> Log Delay Reason
+               </h3>
+               <button onClick={() => setShowPendingModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Why is this lead stuck in the pipeline?</p>
+            <textarea 
+              value={pendingReason} 
+              onChange={(e) => setPendingReason(e.target.value)}
+              placeholder="e.g. Client traveling, will call back next week."
+              className="w-full p-3 border rounded-xl mb-4 text-sm outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+              rows={3}
+            />
+            <div className="pt-2">
+              <button 
+                onClick={async () => {
+                  if(!pendingReason) return alert("Please enter a reason.");
+                  await logPendingReason(jobId, pendingReason);
+                  setShowPendingModal(false);
+                }} 
+                className="w-full py-3 font-bold bg-amber-500 text-white hover:bg-amber-600 rounded-xl transition"
+              >
+                Save Reason
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- 4. NEW INSTALLATION MODAL --- */}
       {showInstallModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
@@ -219,7 +333,7 @@ export default function LeadActionMenu({
         </div>
       )}
 
-      {/* --- 3. SUPPORT & SWAP MODAL --- */}
+      {/* --- 5. SUPPORT & SWAP MODAL --- */}
       {showSupportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border-t-4 border-orange-500">
@@ -276,13 +390,12 @@ export default function LeadActionMenu({
                    Resolve Ticket
                  </SubmitButton>
                </div>
-
             </form>
           </div>
         </div>
       )}
 
-      {/* --- 4. MARK AS LOST MODAL --- */}
+      {/* --- 6. MARK AS LOST MODAL --- */}
       {showLostModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">

@@ -44,3 +44,37 @@ export async function updateLeadStatus(formData: FormData) {
 
   revalidatePath('/dashboard/leads')
 }
+
+// 1. Action to set a scheduled date
+export async function scheduleInstallation(jobId: string, dateString: string) {
+  try {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { 
+        status: 'SCHEDULED',
+        scheduledDate: new Date(dateString),
+        pendingReason: null // Clear pending reason if it is now scheduled
+      }
+    });
+    revalidatePath('/dashboard/leads');
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+// 2. Action to log a delay/pending reason
+export async function logPendingReason(jobId: string, reason: string) {
+  try {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { 
+        pendingReason: reason 
+      }
+    });
+    revalidatePath('/dashboard/leads');
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}

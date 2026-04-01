@@ -4,7 +4,7 @@ import Link from "next/link";
 import React, { Suspense } from "react";
 import { 
   Phone, Car, Plus, Clock, Calendar, Pencil, Hash, Wrench, 
-  AlertCircle, XCircle, Loader2
+  AlertCircle, XCircle, Loader2, User
 } from "lucide-react";
 import LeadActionMenu from "@/components/LeadActionMenu";
 import SortControl from "@/components/SortControl"; 
@@ -67,7 +67,6 @@ async function LeadsTable({
           
           <thead className="bg-gray-50 hidden md:table-header-group">
             <tr>
-              {/* Scaled down headers */}
               <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Client Details</th>
               <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Job Ticket (Vehicle)</th>
               <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Timestamps</th>
@@ -101,6 +100,11 @@ async function LeadsTable({
                             <div>
                               <div className="font-bold text-sm text-gray-900">{client.fullName}</div>
                               <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-0.5"><Phone size={10} /> {client.phoneNumber}</div>
+                              {index === 0 && (
+                                <div className="text-[9px] text-gray-400 mt-0.5 flex items-center gap-1">
+                                  <User size={8} /> Added by: <span className="font-medium text-gray-600">{client.createdBy?.fullName || "System"}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
@@ -113,13 +117,40 @@ async function LeadsTable({
                            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
                              <Car size={14} className="text-gray-400" /> {vehicle.name} <span className="text-gray-400 font-normal">({vehicle.year})</span>
                            </div>
+                           
+                           {/* Badges Container */}
                            <div className="flex flex-wrap gap-1.5 items-center">
                              <span className="inline-flex items-center gap-1 bg-white text-gray-600 text-[10px] px-1.5 py-0.5 rounded border border-gray-200 font-mono"><Hash size={10} /> {vehicle.plateNumber || "NO PLATE"}</span>
                              {job.status === 'NEW_LEAD' && <span className="bg-blue-100 text-blue-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold">NEW LEAD</span>}
                              {job.status === 'LEAD_LOST' && <span className="bg-gray-100 text-gray-600 text-[9px] px-1.5 py-0.5 rounded-full font-bold">LOST</span>}
-                             {job.status === 'IN_PROGRESS' && <span className="bg-orange-100 text-orange-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold">IN PROGRESS</span>}
-                             {job.status === 'SCHEDULED' && <span className="bg-purple-100 text-purple-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold">SCHEDULED</span>}
+                             
+                             {job.status === 'IN_PROGRESS' && (
+                               <span className="flex items-center gap-1 bg-orange-100 text-orange-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                                 IN PROGRESS
+                                 {(job.installerName || job.installer) && (
+                                   <span className="font-normal opacity-80 border-l border-orange-300 pl-1 ml-1">
+                                     by {job.installerName || job.installer?.fullName?.split(' ')[0]}
+                                   </span>
+                                 )}
+                               </span>
+                             )}
+                             
+                             {/* 🟢 STEP 4 FIX: Scheduled Badge with Date */}
+                             {job.status === 'SCHEDULED' && (
+                               <span className="bg-purple-100 text-purple-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                                 SCHEDULED {job.scheduledDate ? `(${new Date(job.scheduledDate).toLocaleDateString('en-GB')})` : ''}
+                               </span>
+                             )}
                            </div>
+
+                           {/* 🟢 STEP 4 FIX: Pending Reason Alert Box */}
+                           {job.pendingReason && job.status === 'NEW_LEAD' && (
+                             <div className="mt-2 p-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-800 shadow-sm w-full">
+                               <span className="font-bold flex items-center gap-1"><AlertCircle size={10} /> Pending Reason:</span>
+                               <span className="mt-0.5 block">{job.pendingReason}</span>
+                             </div>
+                           )}
+
                         </div>
 
                         <div className="flex justify-between items-center text-[10px] text-gray-400">
@@ -139,6 +170,11 @@ async function LeadsTable({
                           <div>
                             <div className="font-bold text-sm text-gray-900">{client.fullName}</div>
                             <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-0.5"><Phone size={10} /> {client.phoneNumber}</div>
+                            {index === 0 && (
+                              <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                                <User size={10} /> Added by: <span className="font-medium text-gray-600">{client.createdBy?.fullName || "System"}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -147,13 +183,40 @@ async function LeadsTable({
                           <div className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
                             <Car size={14} className="text-gray-400" /> <span>{vehicle.name} <span className="text-gray-400 font-normal">({vehicle.year})</span></span>
                           </div>
+                          
+                          {/* Badges Container */}
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             <div className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-[9px] px-1.5 py-0.5 rounded border border-gray-200 font-mono"><Hash size={8} /> {vehicle.plateNumber || "NO PLATE"}</div>
                             {job.status === 'NEW_LEAD' && <span className="bg-blue-100 text-blue-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider">NEW LEAD</span>}
                             {job.status === 'LEAD_LOST' && <span className="bg-gray-100 text-gray-600 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1"><XCircle size={8} /> LOST LEAD</span>}
-                            {job.status === 'IN_PROGRESS' && <span className="flex items-center gap-1 bg-orange-100 text-orange-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider">IN PROGRESS {(job.installerName || job.installer) && <span className="font-normal opacity-80 border-l border-orange-300 pl-1 ml-1">by {job.installerName || job.installer?.fullName?.split(' ')[0]}</span>}</span>}
-                            {job.status === 'SCHEDULED' && <span className="bg-purple-100 text-purple-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider">SCHEDULED</span>}
+                            
+                            {job.status === 'IN_PROGRESS' && (
+                              <span className="flex items-center gap-1 bg-orange-100 text-orange-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider">
+                                IN PROGRESS 
+                                {(job.installerName || job.installer) && (
+                                  <span className="font-normal opacity-80 border-l border-orange-300 pl-1 ml-1">
+                                    by {job.installerName || job.installer?.fullName?.split(' ')[0]}
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                            
+                            {/* 🟢 STEP 4 FIX: Scheduled Badge with Date */}
+                            {job.status === 'SCHEDULED' && (
+                              <span className="bg-purple-100 text-purple-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider">
+                                SCHEDULED {job.scheduledDate ? `(${new Date(job.scheduledDate).toLocaleDateString('en-GB')})` : ''}
+                              </span>
+                            )}
                           </div>
+
+                          {/* 🟢 STEP 4 FIX: Pending Reason Alert Box */}
+                          {job.pendingReason && job.status === 'NEW_LEAD' && (
+                            <div className="mt-2 p-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-800 shadow-sm w-fit">
+                              <span className="font-bold flex items-center gap-1"><AlertCircle size={10} /> Pending Reason:</span>
+                              <span className="mt-0.5 block">{job.pendingReason}</span>
+                            </div>
+                          )}
+
                         </div>
                       </td>
                       <td className="px-4 py-3">

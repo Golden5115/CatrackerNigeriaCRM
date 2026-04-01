@@ -10,6 +10,7 @@ import DeleteClientButton from "@/components/DeleteClientButton";
 import SortControl from "@/components/SortControl"; 
 import LocalSearchInput from "@/components/LocalSearchInput";
 import Pagination from "@/components/Pagination";
+import ImportCSVButton from "@/components/ImportCSVButton"; // 👈 NEW: Add this import
 
 export const dynamic = 'force-dynamic';
 
@@ -28,18 +29,25 @@ async function ClientsTable({
     case 'date_desc': default: orderBy = { createdAt: 'desc' }; break;
   }
 
+// 🛑 FIX: Safely structure the query to allow Zoho Imports to bypass the vehicle filter
   const whereClause: any = {
-    ...(query ? {
-      OR: [
-        { fullName: { contains: query, mode: 'insensitive' } },
-        { phoneNumber: { contains: query } },
-        { vehicles: { some: { plateNumber: { contains: query, mode: 'insensitive' } } } }
-      ]
-    } : {}),
-    vehicles: {
-      some: { jobs: { some: { status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE', 'LEAD_LOST'] } } } }
-    }
+    OR: [
+      { vehicles: { some: { jobs: { some: { status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE', 'LEAD_LOST'] } } } } } },
+      { importBatchId: { not: null } } // 👈 Allows your 15,000 Zoho clients to appear!
+    ]
   };
+
+  if (query) {
+    whereClause.AND = [
+      {
+        OR: [
+          { fullName: { contains: query, mode: 'insensitive' } },
+          { phoneNumber: { contains: query } },
+          { vehicles: { some: { plateNumber: { contains: query, mode: 'insensitive' } } } }
+        ]
+      }
+    ];
+  }
 
   const [totalRecords, clients] = await Promise.all([
     prisma.client.count({ where: whereClause }),
@@ -194,6 +202,13 @@ export default async function ClientsPage({
         <div>
            <h2 className="text-2xl font-bold text-gray-800">Client Database</h2>
            <p className="text-sm text-gray-500">Manage active clients, monitor financials and fleet status.</p>
+        </div>
+        
+        {/* 👇 NEW: Admin Action Buttons */}
+        <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
+          {isAdmin && (
+            <ImportCSVButton />
+          )}
         </div>
       </div>
 
