@@ -28,6 +28,7 @@ model User {
   canEdit           Boolean       @default(false)
   clientsAdded      Client[]      @relation("CreatedBy")
   installerJobs     Job[]         @relation("InstallerJobs")
+  createdInvoices   Invoice[]
 }
 
 model Client {
@@ -44,6 +45,7 @@ model Client {
   createdAt   DateTime  @default(now())
   createdBy   User?     @relation("CreatedBy", fields: [createdById], references: [id])
   vehicles    Vehicle[]
+  invoices    Invoice[]
   @@index([phoneNumber])
   @@index([fullName])
   importBatchId String?  // 👈 NEW: Allows us to track and rollback imports
@@ -154,4 +156,54 @@ enum JobType {
   DEVICE_REPLACEMENT
   SIM_REPLACEMENT
   TRANSFER
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  invoiceNumber   String        @unique
+  
+  // Optional link to Client Database
+  clientId        String?
+  clientName      String
+  clientEmail     String?
+  clientPhone     String?
+  clientAddress   String?
+  
+  subject         String?
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime
+  
+  // Financials
+  subtotal        Decimal       @default(0.00)
+  discountType    String        @default("FIXED") // 'PERCENTAGE' or 'FIXED'
+  discountValue   Decimal       @default(0.00)
+  taxPercentage   Decimal       @default(0.00)
+  total           Decimal       @default(0.00)
+  
+  status          String        @default("UNPAID") // UNPAID, PAID, CANCELLED
+  notes           String?       // Terms & Conditions
+  
+  // Bank Details
+  bankName        String?
+  accountName     String?
+  accountNumber   String?
+  
+  createdById     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  client          Client?       @relation(fields: [clientId], references: [id])
+  createdBy       User?         @relation(fields: [createdById], references: [id])
+  items           InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @default(0.00)
+  total       Decimal  @default(0.00)
+  
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }

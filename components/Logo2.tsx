@@ -16,15 +16,11 @@ export default function Logo({ className = "", textClassName = "", showText = tr
       <img 
         src="/logo2.png" 
         alt="Company Logo" 
-        className="h-20 w-auto object-contain" 
+        className="h-30 w-auto object-contain" 
       /> 
 
       {/* Renders the text next to the logo (optional) */}
-      {showText && (
-        <span className={`text-l font-bold tracking-tight ${textClassName}`}>
-          {companyName}
-        </span>
-      )}
+    
     </div>
   );
 }
