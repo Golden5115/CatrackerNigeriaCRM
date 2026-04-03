@@ -5,6 +5,25 @@ import Logo2 from "@/components/Logo2"
 import PrintInvoiceButton from "@/components/PrintInvoiceButton"
 import { markInvoicePaid } from "@/app/actions/invoice"
 import { ArrowLeft, CheckCircle, Pencil } from "lucide-react"
+import { Metadata } from "next" // 👈 NEW: Import Next.js Metadata
+
+// 👇 NEW: This function dynamically changes the browser tab title so the PDF saves with the correct name!
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const invoice = await prisma.invoice.findUnique({
+    where: { id },
+    select: { invoiceNumber: true, status: true }
+  });
+
+  if (!invoice) return { title: "Invoice Not Found" };
+
+  // If it's paid, name the PDF "Receipt-INV-XXXX", otherwise "Invoice-INV-XXXX"
+  const documentType = invoice.status === 'PAID' ? 'Receipt' : 'Invoice';
+  
+  return {
+    title: `${documentType}-${invoice.invoiceNumber}`
+  };
+}
 
 export default async function InvoicePrintView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,7 +37,6 @@ export default async function InvoicePrintView({ params }: { params: Promise<{ i
 
   const isPaid = invoice.status === 'PAID';
 
-  // Quick Server Action for the Mark Paid button
   const handleMarkPaid = async () => {
     "use server"
     await markInvoicePaid(id)
@@ -27,7 +45,6 @@ export default async function InvoicePrintView({ params }: { params: Promise<{ i
   return (
     <div className="min-h-screen bg-gray-100 py-8 flex flex-col items-center overflow-auto">
       
-      {/* 👇 NEW: Master Action Bar (Only visible on screen, hidden on print) */}
       <div className="no-print w-[210mm] flex justify-between items-center mb-4">
         <Link href="/dashboard/invoices" className="flex items-center gap-2 text-gray-500 hover:text-gray-800 font-bold transition">
           <ArrowLeft size={18} /> Back to Invoices
@@ -63,8 +80,7 @@ export default async function InvoicePrintView({ params }: { params: Promise<{ i
         }
       `}} />
 
-      {/* --- A4 PAPER CONTAINER --- */}
-      <div id="printable-a4" className="bg-white w-[210mm] min-h-[297mm] shadow-2xl flex flex-col p-10 sm:p-12 relative">
+      <div id="printable-a4" className="bg-white w-[210mm] min-h-[297mm] shadow-2xl flex flex-col p-10 sm:p-12 relative mx-auto">
         
         {/* HEADER */}
         <div className="flex justify-between items-start mb-12">
