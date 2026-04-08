@@ -5,9 +5,8 @@ import Logo2 from "@/components/Logo2"
 import PrintInvoiceButton from "@/components/PrintInvoiceButton"
 import { markInvoicePaid } from "@/app/actions/invoice"
 import { ArrowLeft, CheckCircle, Pencil } from "lucide-react"
-import { Metadata } from "next" // 👈 NEW: Import Next.js Metadata
+import { Metadata } from "next"
 
-// 👇 NEW: This function dynamically changes the browser tab title so the PDF saves with the correct name!
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const invoice = await prisma.invoice.findUnique({
@@ -17,7 +16,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
   if (!invoice) return { title: "Invoice Not Found" };
 
-  // If it's paid, name the PDF "Receipt-INV-XXXX", otherwise "Invoice-INV-XXXX"
   const documentType = invoice.status === 'PAID' ? 'Receipt' : 'Invoice';
   
   return {
@@ -93,7 +91,7 @@ export default async function InvoicePrintView({ params }: { params: Promise<{ i
             <div className="text-gray-500 text-xs space-y-1 mt-6">
               <p>90 Wuraola House Ikeja </p>
               <p>Lagos, Nigeria</p>
-              <p>impactcentric@gmail.com</p>
+              <p>hello@cartracker.com.ng</p>
               <p>08039422997</p>
               <p>www.catrackernigeria.com.ng</p>
             </div>
@@ -170,10 +168,14 @@ export default async function InvoicePrintView({ params }: { params: Promise<{ i
                  {invoice.accountNumber && <p className="font-bold text-lg text-gray-900 mt-1 tracking-widest">{invoice.accountNumber}</p>}
                </div>
              )}
+             
+             {/* 👇 NEW: Professionally Styled Notes & Terms */}
              {invoice.notes && (
-               <div className="text-xs text-gray-500">
-                 <p className="font-bold text-gray-400 uppercase tracking-widest text-[10px] mb-1">Notes / Terms</p>
-                 <p>{invoice.notes}</p>
+               <div>
+                 <p className="font-bold text-gray-800 uppercase tracking-widest text-[15] mb-2">Notes & Terms</p>
+                 <div className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed border-l-2 border-[#84c47c] pl-3">
+                   {invoice.notes}
+                 </div>
                </div>
              )}
           </div>
