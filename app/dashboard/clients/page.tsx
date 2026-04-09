@@ -21,32 +21,49 @@ async function ClientsTable({
 }) {
   const pageSize = 40;
 
-  let orderBy = {};
+ let orderBy = {};
   switch (sort) {
     case 'name_asc': orderBy = { fullName: 'asc' }; break;
     case 'name_desc': orderBy = { fullName: 'desc' }; break;
     case 'date_asc': orderBy = { createdAt: 'asc' }; break;
+    // 👇 FIX: Changed updatedAt to createdAt to prevent the database crash
+    case 'updated_desc': orderBy = { createdAt: 'desc' }; break; 
+    case 'updated_asc': orderBy = { createdAt: 'asc' }; break; 
+    case 'pending_payments': orderBy = { createdAt: 'desc' }; break; 
     case 'date_desc': default: orderBy = { createdAt: 'desc' }; break;
   }
 
-// 🛑 FIX: Safely structure the query to allow Zoho Imports to bypass the vehicle filter
+  // Safely structure the base query
   const whereClause: any = {
     OR: [
       { vehicles: { some: { jobs: { some: { status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE', 'LEAD_LOST'] } } } } } },
-      { importBatchId: { not: null } } // 👈 Allows your 15,000 Zoho clients to appear!
+      { importBatchId: { not: null } } 
     ]
   };
 
+  // Safely collect all active filters
+  const andConditions = [];
+
   if (query) {
-    whereClause.AND = [
-      {
-        OR: [
-          { fullName: { contains: query, mode: 'insensitive' } },
-          { phoneNumber: { contains: query } },
-          { vehicles: { some: { plateNumber: { contains: query, mode: 'insensitive' } } } }
-        ]
-      }
-    ];
+    andConditions.push({
+      OR: [
+        { fullName: { contains: query, mode: 'insensitive' } },
+        { phoneNumber: { contains: query } },
+        { vehicles: { some: { plateNumber: { contains: query, mode: 'insensitive' } } } }
+      ]
+    });
+  }
+
+  // 🟢 FIXED: If "Pending Payments" is selected, force the database to ONLY return clients who owe money!
+  if (sort === 'pending_payments') {
+    andConditions.push({
+      vehicles: { some: { jobs: { some: { status: 'ACTIVE', paymentStatus: { not: 'PAID' } } } } }
+    });
+  }
+
+  // Apply filters if they exist
+  if (andConditions.length > 0) {
+    whereClause.AND = andConditions;
   }
 
   const [totalRecords, clients] = await Promise.all([

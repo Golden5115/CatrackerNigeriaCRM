@@ -3,6 +3,7 @@ import { Phone, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { markPaymentAsDone } from "@/app/actions/markPayment";
 import SubmitButton from "@/components/SubmitButton";
 import { Suspense } from "react";
+import FormattedAmountInput from "@/components/FormattedAmountInput";
 
 export const dynamic = 'force-dynamic';
 
@@ -63,10 +64,13 @@ async function PaymentsList() {
 
               <form action={markPaymentAsDone} className="flex items-end gap-2">
                 <input type="hidden" name="jobId" value={job.id} />
+                
+                {/* 🟢 FIXED: Swapped standard input for the Smart Formatter! */}
                 <div>
                   <label className="text-[10px] text-gray-500 uppercase font-bold block">Amount (₦)</label>
-                  <input name="amount" type="number" required placeholder="0.00" className="w-24 px-2 py-1 text-sm border rounded" />
+                  <FormattedAmountInput />
                 </div>
+                
                 <div>
                   <label className="text-[10px] text-gray-500 uppercase font-bold block">Collector</label>
                   <input name="collector" required placeholder="Name" className="w-24 px-2 py-1 text-sm border rounded" />

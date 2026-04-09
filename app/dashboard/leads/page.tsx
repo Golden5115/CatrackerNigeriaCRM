@@ -135,7 +135,6 @@ async function LeadsTable({
                                </span>
                              )}
                              
-                             {/* 🟢 STEP 4 FIX: Scheduled Badge with Date */}
                              {job.status === 'SCHEDULED' && (
                                <span className="bg-purple-100 text-purple-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold">
                                  SCHEDULED {job.scheduledDate ? `(${new Date(job.scheduledDate).toLocaleDateString('en-GB')})` : ''}
@@ -143,11 +142,19 @@ async function LeadsTable({
                              )}
                            </div>
 
-                           {/* 🟢 STEP 4 FIX: Pending Reason Alert Box */}
-                           {job.pendingReason && job.status === 'NEW_LEAD' && (
+                           {/* 🟡 RESTORED: Client Pending Reason (Yellow) */}
+                           {job.pendingReason && (
                              <div className="mt-2 p-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-800 shadow-sm w-full">
                                <span className="font-bold flex items-center gap-1"><AlertCircle size={10} /> Pending Reason:</span>
                                <span className="mt-0.5 block">{job.pendingReason}</span>
+                             </div>
+                           )}
+
+                           {/* 🔴 RESTORED: Tech Support Rejections (Red) */}
+                           {job.supportNotes && (
+                             <div className="mt-2 p-1.5 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-800 shadow-sm w-full">
+                               <span className="font-bold flex items-center gap-1"><AlertCircle size={10} /> Note / Issue:</span>
+                               <span className="mt-0.5 block font-medium">{job.supportNotes}</span>
                              </div>
                            )}
 
@@ -201,7 +208,6 @@ async function LeadsTable({
                               </span>
                             )}
                             
-                            {/* 🟢 STEP 4 FIX: Scheduled Badge with Date */}
                             {job.status === 'SCHEDULED' && (
                               <span className="bg-purple-100 text-purple-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider">
                                 SCHEDULED {job.scheduledDate ? `(${new Date(job.scheduledDate).toLocaleDateString('en-GB')})` : ''}
@@ -209,11 +215,19 @@ async function LeadsTable({
                             )}
                           </div>
 
-                          {/* 🟢 STEP 4 FIX: Pending Reason Alert Box */}
-                          {job.pendingReason && job.status === 'NEW_LEAD' && (
+                          {/* 🟡 RESTORED: Client Pending Reason (Yellow) */}
+                          {job.pendingReason && (
                             <div className="mt-2 p-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-800 shadow-sm w-fit">
                               <span className="font-bold flex items-center gap-1"><AlertCircle size={10} /> Pending Reason:</span>
                               <span className="mt-0.5 block">{job.pendingReason}</span>
+                            </div>
+                          )}
+
+                          {/* 🔴 RESTORED: Tech Support Rejections (Red) */}
+                          {job.supportNotes && (
+                            <div className="mt-2 p-1.5 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-800 shadow-sm w-fit">
+                              <span className="font-bold flex items-center gap-1"><AlertCircle size={10} /> Note / Issue:</span>
+                              <span className="mt-0.5 block font-medium">{job.supportNotes}</span>
                             </div>
                           )}
 
@@ -265,7 +279,6 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   return (
     <div className="space-y-6">
       
-      {/* Reduced Page Headers too! */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Sales Pipeline</h2>

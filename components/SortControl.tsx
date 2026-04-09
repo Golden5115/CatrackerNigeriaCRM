@@ -2,12 +2,9 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 
-// We set a default value of 'date_desc' right in the parameters
 export default function SortControl({ currentSort = 'date_desc' }: { currentSort?: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  
-  // Notice we removed the duplicate "const currentSort = ..." line entirely!
 
   return (
     <div className="relative">
@@ -22,6 +19,9 @@ export default function SortControl({ currentSort = 'date_desc' }: { currentSort
       >
         <option value="date_desc">Newest First</option>
         <option value="date_asc">Oldest First</option>
+        <option value="updated_desc">Recently Modified</option>
+        <option value="updated_asc">Oldest Modified</option>
+        <option value="pending_payments">Pending Payments</option>
         <option value="name_asc">Name (A-Z)</option>
         <option value="name_desc">Name (Z-A)</option>
       </select>
