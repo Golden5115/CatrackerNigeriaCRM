@@ -1,134 +1,129 @@
 import { prisma } from "@/lib/prisma"
+import { verifySession } from "@/lib/session"
+import LocalSearchInput from "@/components/LocalSearchInput"
+import InventoryFilter from "@/components/InventoryFilter"
 import AddInventoryForms from "@/components/AddInventoryForms"
-import { Package, Hash, CheckCircle, XCircle, Loader2 } from "lucide-react"
-import { Suspense } from "react"
+import { Cpu, CreditCard, CheckCircle, Wrench, AlertTriangle } from "lucide-react"
 
 export const dynamic = 'force-dynamic'
 
-// ==========================================
-// 1. THE DATA COMPONENT (Loads in background)
-// ==========================================
-async function InventoryTables() {
-  const availableDevices = await prisma.device.findMany({
-    where: { status: 'IN_STOCK' },
-    orderBy: { createdAt: 'desc' }
-  })
+export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const params = await searchParams;
+  const query = (params.query as string) || '';
+  const statusFilter = (params.status as string) || 'ALL';
 
-  const availableSims = await prisma.simCard.findMany({
-    where: { status: 'IN_STOCK' },
-    orderBy: { createdAt: 'desc' }
-  })
+  const session = await verifySession()
+  const isAdminOrOps = session?.role === 'ADMIN' || session?.role === 'OPERATIONS'
+
+  // Build the dynamic filter logic
+  const deviceWhere: any = {};
+  const simWhere: any = {};
+
+  if (query) {
+    deviceWhere.imei = { contains: query, mode: 'insensitive' };
+    simWhere.simNumber = { contains: query, mode: 'insensitive' };
+  }
+
+  if (statusFilter !== 'ALL') {
+    deviceWhere.status = statusFilter;
+    simWhere.status = statusFilter;
+  }
+
+  // Fetch from database
+  const [devices, sims] = await Promise.all([
+    prisma.device.findMany({ where: deviceWhere, include: { job: { include: { vehicle: { include: { client: true } } } } }, orderBy: { createdAt: 'desc' } }),
+    prisma.simCard.findMany({ where: simWhere, include: { job: { include: { vehicle: { include: { client: true } } } } }, orderBy: { createdAt: 'desc' } })
+  ])
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'IN_STOCK': return <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold uppercase flex items-center gap-1 w-fit"><CheckCircle size={10}/> Unused</span>;
+      case 'INSTALLED': return <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold uppercase flex items-center gap-1 w-fit"><Wrench size={10}/> Used</span>;
+      case 'FAULTY': return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-bold uppercase flex items-center gap-1 w-fit"><AlertTriangle size={10}/> Faulty</span>;
+      default: return <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-[10px] font-bold uppercase">{status}</span>;
+    }
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* DEVICES TABLE */}
-      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-        <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex justify-between items-center">
-           <h3 className="font-bold text-blue-900">Trackers In Stock</h3>
-           <span className="bg-blue-200 text-blue-800 text-xs font-bold px-2 py-1 rounded-full">
-             {availableDevices.length} Available
-           </span>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Inventory Management</h2>
+          <p className="text-sm text-gray-500">Track IMEIs, SIM cards, and hardware assignments.</p>
         </div>
-        <div className="max-h-[500px] overflow-y-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <tbody className="divide-y divide-gray-100">
-              {availableDevices.map(device => (
-                <tr key={device.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-3 flex items-center gap-3">
-                    <Hash size={14} className="text-gray-400" />
-                    <span className="font-mono text-gray-800 font-medium">{device.imei}</span>
-                  </td>
-                  <td className="px-6 py-3 text-right">
-                    <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
-                      <CheckCircle size={10} /> Ready
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {availableDevices.length === 0 && (
-                <tr>
-                  <td colSpan={2} className="px-6 py-8 text-center text-gray-400">
-                    <XCircle size={24} className="mx-auto mb-2 opacity-50" />
-                    No trackers in stock. Add some above.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {isAdminOrOps && <AddInventoryForms />}
       </div>
 
-      {/* SIM CARDS TABLE */}
-      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-        <div className="bg-purple-50 px-6 py-4 border-b border-purple-100 flex justify-between items-center">
-           <h3 className="font-bold text-purple-900">SIM Cards In Stock</h3>
-           <span className="bg-purple-200 text-purple-800 text-xs font-bold px-2 py-1 rounded-full">
-             {availableSims.length} Available
-           </span>
+      {/* 🟢 NEW: Unified Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex-1">
+          <LocalSearchInput placeholder="Search IMEI or SIM Number..." />
         </div>
-        <div className="max-h-[500px] overflow-y-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <tbody className="divide-y divide-gray-100">
-              {availableSims.map(sim => (
-                <tr key={sim.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-3 flex flex-col">
-                    <span className="font-mono text-gray-800 font-medium">{sim.simNumber}</span>
-                    <span className="text-[10px] text-gray-500 uppercase font-bold mt-0.5">{sim.network}</span>
-                  </td>
-                  <td className="px-6 py-3 text-right">
-                    <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
-                      <CheckCircle size={10} /> Ready
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {availableSims.length === 0 && (
-                <tr>
-                  <td colSpan={2} className="px-6 py-8 text-center text-gray-400">
-                    <XCircle size={24} className="mx-auto mb-2 opacity-50" />
-                    No SIM cards in stock. Add some above.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ==========================================
-// 2. THE PAGE SHELL (Loads Instantly)
-// ==========================================
-export default function InventoryPage() {
-  return (
-    <div className="max-w-6xl mx-auto">
-      
-      {/* 🟢 HEADER LOADS INSTANTLY */}
-      <div className="mb-8">
-         <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-           <Package className="text-[#84c47c]" size={32} /> 
-           Inventory Management
-         </h2>
-         <p className="text-gray-500 mt-1">Add and monitor hardware before assigning to the field team.</p>
+        <InventoryFilter currentFilter={statusFilter} />
       </div>
 
-      {/* 🟢 INPUT FORM LOADS INSTANTLY */}
-      <AddInventoryForms />
-
-      {/* 🟢 TABLES SHOW SPINNER WHILE WAITING */}
-      <div className="mt-8">
-        <Suspense fallback={
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-24 flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="animate-spin text-[#84c47c]" size={40} />
-            <p className="text-gray-400 font-medium animate-pulse">Loading stock levels...</p>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        
+        {/* DEVICES (TRACKERS) TABLE */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-[600px]">
+          <div className="bg-gray-50 p-4 border-b flex items-center gap-2">
+             <Cpu className="text-gray-500" size={18} />
+             <h3 className="font-bold text-gray-800">Tracker Hardware (IMEIs)</h3>
+             <span className="ml-auto bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded-full">{devices.length}</span>
           </div>
-        }>
-          <InventoryTables />
-        </Suspense>
-      </div>
+          <div className="flex-1 overflow-auto p-4">
+             <div className="space-y-3">
+               {devices.map(device => (
+                 <div key={device.id} className="p-3 border rounded-lg hover:border-blue-300 transition bg-gray-50">
+                    <div className="flex justify-between items-start mb-2">
+                       <div className="font-mono font-bold text-sm text-gray-900">{device.imei}</div>
+                       {getStatusBadge(device.status)}
+                    </div>
+                    {device.status === 'INSTALLED' && device.job && (
+                       <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-100">
+                         Installed in: <span className="font-bold">{device.job.vehicle.name} ({device.job.vehicle.plateNumber})</span><br/>
+                         Client: <span className="font-medium">{device.job.vehicle.client.fullName}</span>
+                       </div>
+                    )}
+                 </div>
+               ))}
+               {devices.length === 0 && <p className="text-sm text-gray-500 text-center py-8">No IMEIs found.</p>}
+             </div>
+          </div>
+        </div>
 
+        {/* SIM CARDS TABLE */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-[600px]">
+          <div className="bg-gray-50 p-4 border-b flex items-center gap-2">
+             <CreditCard className="text-gray-500" size={18} />
+             <h3 className="font-bold text-gray-800">Tracker SIM Cards</h3>
+             <span className="ml-auto bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded-full">{sims.length}</span>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+             <div className="space-y-3">
+               {sims.map(sim => (
+                 <div key={sim.id} className="p-3 border rounded-lg hover:border-purple-300 transition bg-gray-50">
+                    <div className="flex justify-between items-start mb-2">
+                       <div>
+                         <div className="font-mono font-bold text-sm text-gray-900">{sim.simNumber}</div>
+                         <div className="text-[10px] font-bold text-purple-600 uppercase mt-0.5">{sim.network || "UNKNOWN NETWORK"}</div>
+                       </div>
+                       {getStatusBadge(sim.status)}
+                    </div>
+                    {sim.status === 'INSTALLED' && sim.job && (
+                       <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-100">
+                         Active in: <span className="font-bold">{sim.job.vehicle.name} ({sim.job.vehicle.plateNumber})</span><br/>
+                         Client: <span className="font-medium">{sim.job.vehicle.client.fullName}</span>
+                       </div>
+                    )}
+                 </div>
+               ))}
+               {sims.length === 0 && <p className="text-sm text-gray-500 text-center py-8">No SIMs found.</p>}
+             </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   )
 }

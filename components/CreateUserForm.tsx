@@ -6,13 +6,17 @@ import SubmitButton from "./SubmitButton"
 import { createUser } from "@/app/actions/users"
 
 const AVAILABLE_MODULES = [
-  { id: '/dashboard/leads', label: 'Sales Pipeline (Leads)' },
-  { id: '/dashboard/tech', label: 'Tech Support (QC)' },
-  { id: '/dashboard/activation', label: 'Client Onboarding' },
-  { id: '/dashboard/inventory', label: 'Inventory Management' },
-  { id: '/dashboard/payments', label: 'Payments & Financials' },
-  { id: '/dashboard/clients', label: 'Client Database' }
-]
+  { id: "Dashboard", label: "Dashboard" },
+  { id: "Sales Pipeline", label: "Sales Pipeline" },
+  { id: "Client Database", label: "Client Database" },
+  { id: "Payments", label: "Payments" },
+  { id: "Invoices", label: "Invoices" },
+  { id: "Inventory", label: "Inventory" },
+  { id: "Tech Support", label: "Tech Support" },
+  { id: "Activation", label: "Activation" },
+  { id: "Revenue Analytics", label: "Revenue Analytics" },
+  { id: "Team", label: "Team" }
+];
 
 export default function CreateUserForm() {
   const [showPassword, setShowPassword] = useState(false)

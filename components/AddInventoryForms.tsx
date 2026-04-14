@@ -30,7 +30,7 @@ export default function AddInventoryForms() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+   <div className="flex flex-col lg:flex-row gap-4 w-full lg:w-auto items-stretch lg:items-center">
       
       {/* ADD TRACKER FORM */}
       <div className="bg-white p-6 rounded-xl border shadow-sm">
