@@ -143,3 +143,26 @@ export async function markJobAsLost(formData: FormData) {
     return { error: "Failed to mark lead as lost." }
   }
 }
+
+// 5. UPDATE INSTALL DATE (For fixing old "Pending" dates)
+export async function updateInstallDate(jobId: string, newDate: string) {
+  try {
+    const session = await verifySession()
+    if (!session?.userId) return { error: "Unauthorized." }
+
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { 
+        // Force the database to accept this new date
+        installDate: new Date(newDate) 
+      }
+    })
+
+    revalidatePath('/dashboard/vehicles')
+    revalidatePath('/dashboard/clients')
+    return { success: true }
+  } catch (error: any) {
+    console.error("UPDATE DATE ERROR:", error)
+    return { error: "Failed to update the installation date." }
+  }
+}

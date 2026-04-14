@@ -1,17 +1,18 @@
 import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import React, { Suspense } from "react";
-import { Car, Hash, User, Cpu, Calendar, Loader2, CheckCircle, Wrench, Smartphone } from "lucide-react";
+import { Car, Hash, User, Cpu, Loader2, CheckCircle, Wrench, Smartphone } from "lucide-react";
 import { verifySession } from "@/lib/session"
 import LocalSearchInput from "@/components/LocalSearchInput";
+import SortControl from "@/components/SortControl"; 
 import Pagination from "@/components/Pagination";
+import DateEditor from "@/components/DateEditor"; // 👈 NEW
 
 export const dynamic = 'force-dynamic';
 
-async function VehiclesTable({ query, page }: { query: string, page: number }) {
+async function VehiclesTable({ sort, query, page }: { sort: string, query: string, page: number }) {
   const pageSize = 40;
 
-  // 🟢 FIXED: We now STRICTLY filter for jobs that have passed the installation phase!
   const whereClause: any = {
     status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE'] }
   };
@@ -25,6 +26,14 @@ async function VehiclesTable({ query, page }: { query: string, page: number }) {
     ];
   }
 
+  let orderBy: any = [];
+  switch (sort) {
+    case 'name_asc': orderBy = [{ vehicle: { name: 'asc' } }]; break;
+    case 'name_desc': orderBy = [{ vehicle: { name: 'desc' } }]; break;
+    case 'date_asc': orderBy = [{ installDate: { sort: 'asc', nulls: 'last' } }]; break;
+    case 'date_desc': default: orderBy = [{ installDate: { sort: 'desc', nulls: 'last' } }]; break;
+  }
+
   const [totalRecords, jobs] = await Promise.all([
     prisma.job.count({ where: whereClause }),
     prisma.job.findMany({
@@ -34,11 +43,7 @@ async function VehiclesTable({ query, page }: { query: string, page: number }) {
         device: true, 
         simCard: true 
       },
-      orderBy: [
-        { installDate: { sort: 'desc', nulls: 'last' } },
-        { configurationDate: { sort: 'desc', nulls: 'last' } },
-        { createdAt: 'desc' }
-      ],
+      orderBy: orderBy,
       skip: (page - 1) * pageSize, 
       take: pageSize, 
     })
@@ -48,7 +53,7 @@ async function VehiclesTable({ query, page }: { query: string, page: number }) {
 
   return (
     <div className="bg-white border rounded-xl shadow-sm overflow-hidden flex flex-col">
-      <div className="flex-1 overflow-x-auto">
+      <div className="flex-1 overflow-x-auto min-h-[400px]">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -56,15 +61,13 @@ async function VehiclesTable({ query, page }: { query: string, page: number }) {
               <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase whitespace-nowrap">Client Owner</th>
               <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase whitespace-nowrap">Installed Hardware</th>
               <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase whitespace-nowrap">Job Status</th>
-              <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase whitespace-nowrap">Install Date</th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase whitespace-nowrap w-[150px]">Install Date</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {jobs.map((job) => {
               const vehicle = job.vehicle;
-              
-              const rawDate = job.installDate || job.configurationDate;
-              const displayDate = rawDate ? new Date(rawDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Pending';
+              const displayDate = job.installDate ? new Date(job.installDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Pending';
 
               return (
                 <tr key={job.id} className="hover:bg-gray-50 transition group">
@@ -93,9 +96,8 @@ async function VehiclesTable({ query, page }: { query: string, page: number }) {
                     {job.status === 'CONFIGURED' && <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase"><Smartphone size={10} /> Needs Login</span>}
                   </td>
                   <td className="px-4 py-3">
-                    <div className={`text-[11px] font-medium flex items-center gap-1 px-2 py-1 rounded w-fit border ${displayDate === 'Pending' ? 'bg-gray-50 text-gray-400 border-gray-100' : 'bg-green-50 text-green-700 border-green-100'}`}>
-                      <Calendar size={12} className={displayDate === 'Pending' ? 'text-gray-400' : 'text-green-500'}/> {displayDate}
-                    </div>
+                    {/* 🟢 NEW: Integrated the DateEditor Component! */}
+                    <DateEditor jobId={job.id} currentDisplayDate={displayDate} />
                   </td>
                 </tr>
               );
@@ -111,6 +113,7 @@ async function VehiclesTable({ query, page }: { query: string, page: number }) {
 
 export default async function VehiclesPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const params = await searchParams;
+  const sort = (params.sort as string) || 'date_desc';
   const query = (params.query as string) || '';
   const page = Number(params.page) || 1; 
 
@@ -118,22 +121,27 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-6">
-      <div>
-         <h2 className="text-2xl font-bold text-gray-800">Fleet & Jobs Database</h2>
-         <p className="text-sm text-gray-500">A flat database of every active vehicle, its assigned hardware, and job status.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+           <h2 className="text-2xl font-bold text-gray-800">Fleet & Jobs Database</h2>
+           <p className="text-sm text-gray-500">A flat database of every active vehicle, its assigned hardware, and job status.</p>
+        </div>
       </div>
-
-      <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-100">
-        <LocalSearchInput placeholder="Search vehicle name, plate, IMEI, or client..." />
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex-1">
+          <LocalSearchInput placeholder="Search vehicle name, plate, IMEI, or client..." />
+        </div>
+        <div className="w-full sm:w-48 border-t sm:border-t-0 sm:border-l border-gray-100 pt-2 sm:pt-0 sm:pl-2">
+          <SortControl currentSort={sort} />
+        </div>
       </div>
-
-      <Suspense key={query + page} fallback={
+      <Suspense key={query + sort + page} fallback={
         <div className="bg-white border rounded-xl shadow-sm p-24 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="animate-spin text-[#84c47c]" size={32} />
           <p className="text-sm text-gray-400 font-medium animate-pulse">Loading fleet database...</p>
         </div>
       }>
-        <VehiclesTable query={query} page={page} />
+        <VehiclesTable sort={sort} query={query} page={page} />
       </Suspense>
     </div>
   );
