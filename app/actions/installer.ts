@@ -75,6 +75,10 @@ export async function submitInstallation(formData: FormData) {
   const simCardId = formData.get('simCardId') as string 
   const plateNumber = formData.get('plateNumber') as string
   const vehicleName = formData.get('vehicleName') as string
+  const manualInstallDate = formData.get('installDate') as string
+  
+  // 👇 Look for the new email input
+  const clientEmail = formData.get('clientEmail') as string | null
 
   if (!deviceId || !simCardId) {
     return { error: "You must search and select an IMEI and SIM Card from the inventory." }
@@ -85,24 +89,35 @@ export async function submitInstallation(formData: FormData) {
       await tx.device.update({ where: { id: deviceId }, data: { status: 'INSTALLED' } })
       await tx.simCard.update({ where: { id: simCardId }, data: { status: 'INSTALLED' } })
 
-      await tx.job.update({
+      // Update the Job, but also retrieve the Vehicle so we know which Client owns it!
+      const updatedJob = await tx.job.update({
         where: { id: jobId },
         data: {
           status: 'PENDING_QC',
+          installDate: new Date(manualInstallDate),
           device: { connect: { id: deviceId } },
           simCard: { connect: { id: simCardId } },
           vehicle: {
             update: { name: vehicleName, plateNumber: plateNumber }
           }
-        }
+        },
+        include: { vehicle: true } 
       })
+
+      // 👇 If they typed an email, save it straight to the Client Database!
+      if (clientEmail && updatedJob.vehicle.clientId) {
+        await tx.client.update({
+          where: { id: updatedJob.vehicle.clientId },
+          data: { email: clientEmail }
+        })
+      }
     })
 
     revalidatePath('/dashboard/leads')
     return { success: true }
   } catch (error) {
     console.error(error)
-    return { error: "System Error. The items might have already been used." }
+    return { error: "System Error. The items might have already been used, or that email is already registered to someone else." }
   }
 }
 

@@ -18,10 +18,11 @@ interface LeadActionMenuProps {
   vehicleName?: string
   installerName?: string | null
   currentUserRole?: string 
+  clientEmail?: string | null // 👈 Add this line
 }
 
 export default function LeadActionMenu({ 
-  jobId, currentStatus, jobType, vehicleId, installerId, currentUserId, vehicleName, installerName, currentUserRole 
+  jobId, currentStatus, jobType, vehicleId, installerId, currentUserId, vehicleName, installerName, currentUserRole, clientEmail // 👈 Added here!
 }: LeadActionMenuProps) {
   
   const [isOpen, setIsOpen] = useState(false)
@@ -302,11 +303,45 @@ export default function LeadActionMenu({
                <button onClick={() => setShowInstallModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
             </div>
 
-            <form action={async (formData) => {
-                await submitInstallation(formData);
-                setShowInstallModal(false);
+           <form action={async (formData) => {
+                const res = await submitInstallation(formData);
+                if (res?.error) {
+                  alert(res.error);
+                } else {
+                  setShowInstallModal(false);
+                }
             }} className="space-y-4">
                <input type="hidden" name="jobId" value={jobId} />
+               
+               {/* 🟢 NEW: Compulsory Email Input (ONLY shows if client has no email) */}
+               {!clientEmail && (
+                 <div>
+                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                     Client Email <span className="text-red-500">*</span>
+                   </label>
+                   <input 
+                     type="email" 
+                     name="clientEmail" 
+                     required 
+                     placeholder="client@example.com"
+                     className="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm font-medium" 
+                   />
+                 </div>
+               )}
+
+               {/* 🟢 FIXED: Installation Date (Default is now NIL) */}
+               <div>
+                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                   Installation Date <span className="text-red-500">*</span>
+                 </label>
+                 <input 
+                   type="date" 
+                   name="installDate" 
+                   required 
+                   className="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm font-medium" 
+                 />
+               </div>
+
                <div>
                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Vehicle Name</label>
                  <input name="vehicleName" defaultValue={vehicleName} required className="w-full p-3 border rounded-xl bg-gray-50" />

@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Users, Server, 
   Smartphone, CreditCard, Shield, Briefcase, LogOut, Package, User, Lock, 
   TrendingUp, Menu, X, Wrench,
-  FileText
+  FileText,
+  Car
 } from "lucide-react";
 import Logo from "./Logo";
 import SearchInput from "./SearchInput";
@@ -25,6 +26,7 @@ const allMenuItems = [
   { name: "Tech Support", href: "/dashboard/tech", icon: Server, requiredModule: "/dashboard/tech" },
   { name: "Client Onboarding", href: "/dashboard/activation", icon: Smartphone, requiredModule: "/dashboard/activation" },
   { name: "Client Database", href: "/dashboard/clients", icon: Briefcase, requiredModule: "/dashboard/clients" },
+  { name: "Fleet & Vehicles", href: "/dashboard/vehicles", icon: Car, module: "Fleet & Vehicles" },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, requiredModule: "/dashboard/payments" },
   { name: "Invoices", href: "/dashboard/invoices", icon: FileText, requiredModule: null },
   { name: "Revenue Analysis", href: "/dashboard/revenue", icon: TrendingUp, adminOnly: true },

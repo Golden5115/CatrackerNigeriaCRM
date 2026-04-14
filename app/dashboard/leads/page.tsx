@@ -109,7 +109,18 @@ async function LeadsTable({
                           </div>
                           <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
                             {index === 0 && canEdit && <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-1.5"><Pencil size={14} /></Link>}
-                            <LeadActionMenu jobId={job.id} currentStatus={job.status} jobType={job.jobType} vehicleId={vehicle.id} installerId={job.installerId} currentUserId={userId} vehicleName={vehicle.name} installerName={job.installerName} currentUserRole={userRole} />
+                            <LeadActionMenu 
+  jobId={job.id} 
+  currentStatus={job.status} 
+  jobType={job.jobType} 
+  vehicleId={vehicle.id} 
+  installerId={job.installerId} 
+  currentUserId={userId} 
+  vehicleName={vehicle.name} 
+  installerName={job.installerName} 
+  currentUserRole={userRole} 
+  clientEmail={client.email} // 👈 Add this line to both!
+/>
                           </div>
                         </div>
 
@@ -244,7 +255,18 @@ async function LeadsTable({
                           {index === 0 && canEdit && <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-1.5 hover:bg-blue-50 rounded-lg transition"><Pencil size={14} /></Link>}
                           {index === 0 && canDelete && <DeleteClientButton clientId={client.id} />}
                           <div className="ml-1 border-l pl-1">
-                            <LeadActionMenu jobId={job.id} currentStatus={job.status} jobType={job.jobType} vehicleId={vehicle.id} installerId={job.installerId} currentUserId={userId} vehicleName={vehicle.name} installerName={job.installerName} currentUserRole={userRole} />
+                            <LeadActionMenu 
+  jobId={job.id} 
+  currentStatus={job.status} 
+  jobType={job.jobType} 
+  vehicleId={vehicle.id} 
+  installerId={job.installerId} 
+  currentUserId={userId} 
+  vehicleName={vehicle.name} 
+  installerName={job.installerName} 
+  currentUserRole={userRole} 
+  clientEmail={client.email} // 👈 Add this line to both!
+/>
                           </div>
                         </div>
                       </td>

@@ -9,6 +9,7 @@ const AVAILABLE_MODULES = [
   { id: "Dashboard", label: "Dashboard" },
   { id: "Sales Pipeline", label: "Sales Pipeline" },
   { id: "Client Database", label: "Client Database" },
+  { id: "Fleet & Vehicles", label: "Fleet & Vehicles" },
   { id: "Payments", label: "Payments" },
   { id: "Invoices", label: "Invoices" },
   { id: "Inventory", label: "Inventory" },
