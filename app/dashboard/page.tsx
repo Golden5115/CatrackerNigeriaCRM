@@ -1,158 +1,316 @@
 import { prisma } from "@/lib/prisma"
 import { verifySession } from "@/lib/session"
-import { CheckCircle, Briefcase, Users, TrendingUp, AlertCircle, BarChart3 } from "lucide-react"
-import DashboardCharts from "@/components/DashboardCharts"
+import { 
+  Car, Wrench, Cpu, AlertCircle, Smartphone, 
+  TrendingUp, Calendar, Package, Hash, User,
+  Activity, CheckCircle2, DollarSign
+} from "lucide-react"
+import Link from "next/link"
+import OverviewFilter from "@/components/OverviewFilter"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic';
 
-export default async function DashboardOverview() {
-  const session = await verifySession()
-  const userId = typeof session?.userId === 'string' ? session.userId : null;
-  const user = userId ? await prisma.user.findUnique({ where: { id: userId }}) : null;
-
- // --- ADMIN DATA CRUNCHING ---
-  let stats = {
-    dailyJobs: 0, weeklyJobs: 0, monthlyJobs: 0,
-    leadsConverted: 0, leadsUnconverted: 0, leadsLost: 0, totalLeads: 0
-  };
+export default async function DashboardOverview({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  await verifySession();
+  const params = await searchParams;
   
-  if (user?.role === 'ADMIN') {
-    const allJobs = await prisma.job.findMany({
-      select: {
-        status: true,
-        updatedAt: true,
-        onboarded: true,
-        amountPaid: true,      // Needed for Revenue
-        paymentStatus: true    // Needed for Revenue
-      }
-    })
+  const now = new Date();
+  
+  // 1. Core Date Logic
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfThisWeek = new Date(now);
+  startOfThisWeek.setDate(now.getDate() - now.getDay()); 
+  startOfThisWeek.setHours(0,0,0,0);
+  
+  const startOfLastWeek = new Date(startOfThisWeek);
+  startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+  const endOfLastWeek = new Date(startOfThisWeek);
+  endOfLastWeek.setMilliseconds(-1);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  // 2. Filter Logic (Defaults to Current Month)
+  const filterMonth = params?.month ? parseInt(params.month as string) : now.getMonth() + 1;
+  const filterYear = params?.year ? parseInt(params.year as string) : now.getFullYear();
+  const filterStartDate = new Date(filterYear, filterMonth - 1, 1);
+  const filterEndDate = new Date(filterYear, filterMonth, 0, 23, 59, 59, 999);
+  
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const displayFilterName = `${monthNames[filterMonth - 1]} ${filterYear}`;
 
-    const firstDayOfWeek = new Date(today);
-    firstDayOfWeek.setDate(today.getDate() - today.getDay());
+  const completedStatuses: any[] = ['PENDING_QC', 'CONFIGURED', 'ACTIVE'];
 
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  // 🟢 FIXED: The "IN_STOCK" error is removed, and the queries are cleanly split
+  const [
+    installsThisMonth, installsThisWeek, installsLastWeek,
+    totalLeads, convertedLeads, pendingSupport,
+    completedSupport, pendingPayments
+  ] = await Promise.all([
+    prisma.job.count({ where: { installDate: { gte: startOfThisMonth }, status: { in: completedStatuses } } }),
+    prisma.job.count({ where: { installDate: { gte: startOfThisWeek }, status: { in: completedStatuses } } }),
+    prisma.job.count({ where: { installDate: { gte: startOfLastWeek, lte: endOfLastWeek }, status: { in: completedStatuses } } }),
+    prisma.job.count({ where: { jobType: 'NEW_INSTALL' } }),
+    prisma.job.count({ where: { jobType: 'NEW_INSTALL', onboarded: true } }), 
+    prisma.job.count({ where: { jobType: { not: 'NEW_INSTALL' }, status: { in: ['NEW_LEAD', 'SCHEDULED', 'IN_PROGRESS', 'PENDING_QC'] } } }),
+    prisma.job.count({ where: { jobType: { not: 'NEW_INSTALL' }, status: { in: ['CONFIGURED', 'ACTIVE'] } } }),
+    prisma.job.count({ where: { status: 'ACTIVE', paymentStatus: { not: 'PAID' } } }),
+  ]);
 
-    stats = {
-      dailyJobs: 0, weeklyJobs: 0, monthlyJobs: 0,
-      leadsConverted: 0, leadsUnconverted: 0, leadsLost: 0, totalLeads: allJobs.length
-    }
+  // Inventory and Queues batch
+  const [unusedSims, unusedDevices, inOnboarding, inTech] = await Promise.all([
+    prisma.simCard.count({ where: { status: 'IN_STOCK' } }),
+    prisma.device.count({ where: { status: 'IN_STOCK' } }),
+    prisma.job.count({ where: { status: 'CONFIGURED', onboarded: false } }),
+    prisma.job.count({ where: { status: 'PENDING_QC' } }),
+  ]);
 
-    allJobs.forEach(job => {
-      const jobDate = new Date(job.updatedAt);
+  // 🟢 Separate fetch for the table to preserve deep relationship types
+  const filteredInstallsList = await prisma.job.findMany({
+    where: { 
+      installDate: { gte: filterStartDate, lte: filterEndDate },
+      status: { in: completedStatuses } 
+    },
+    include: {
+      vehicle: { include: { client: true } },
+      device: true
+    },
+    orderBy: { installDate: 'desc' }
+  });
 
-      if (['ACTIVE', 'CONFIGURED'].includes(job.status)) {
-        if (jobDate >= today) stats.dailyJobs++;
-        if (jobDate >= firstDayOfWeek) stats.weeklyJobs++;
-        if (jobDate >= firstDayOfMonth) stats.monthlyJobs++;
-      }
-
-      // 👇 FIX: Strict Lead Conversion Logic
-      if (job.status === 'LEAD_LOST') {
-        stats.leadsLost++;
-      } else if (job.status === 'ACTIVE' || job.onboarded === true) {
-        stats.leadsConverted++; // Only counts if fully onboarded!
-      } else {
-        stats.leadsUnconverted++; // Everything else (New, Scheduled, In Progress, In Tech) is Pending
-      }
-    })
-  }
+  const conversionRate = totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+    <div className="space-y-8 pb-12 font-sans max-w-7xl mx-auto">
       
-      {/* 1. THE HERO SECTION */}
-      <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-green-50 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"></div>
-        
-        <div className="bg-[#e0f2de] w-20 h-20 rounded-full flex items-center justify-center shrink-0">
-          <CheckCircle size={40} className="text-[#2d4a2a]" />
-        </div>
-        
+      {/* HEADER SECTION */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, {user?.fullName || 'Team Member'}!</h2>
-          <p className="text-gray-500 text-lg mb-4">You are logged in as <span className="font-bold text-[#84c47c]">{user?.role.replace('_', ' ')}</span>.</p>
-          
-          {user?.role !== 'ADMIN' && (
-            <div className="inline-block bg-gray-50 border px-6 py-3 rounded-xl text-sm font-medium text-gray-600">
-              Select a module from the sidebar menu to begin your workflow.
-            </div>
-          )}
+           <h2 className="text-3xl font-black text-gray-900 tracking-tight">Operations Center</h2>
+           <p className="text-sm text-gray-500 font-medium mt-1">Live statistics across leads, fleet, support, and inventory.</p>
         </div>
       </div>
 
-      {/* 2. ADMIN LIVE METRICS (Operations Only) */}
-      {user?.role === 'ADMIN' && (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* SECTION A: JOB VOLUME */}
-            <div className="flex flex-col">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <Briefcase className="text-blue-500" /> Installations Completed
-              </h3>
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6 flex-1">
-                <div className="flex justify-between items-center border-b pb-4 mt-2">
-                  <span className="text-gray-600 font-medium">Completed Today</span>
-                  <span className="text-2xl font-bold text-gray-900 bg-blue-50 px-4 py-1 rounded-lg">{stats.dailyJobs}</span>
-                </div>
-                <div className="flex justify-between items-center border-b pb-4">
-                  <span className="text-gray-600 font-medium">Completed This Week</span>
-                  <span className="text-2xl font-bold text-gray-900 bg-blue-50 px-4 py-1 rounded-lg">{stats.weeklyJobs}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 font-medium">Completed This Month</span>
-                  <span className="text-2xl font-bold text-gray-900 bg-blue-100 px-4 py-1 rounded-lg text-blue-800">{stats.monthlyJobs}</span>
-                </div>
+      {/* ============================== */}
+      {/* ROW 1: PREMIUM KPI CARDS       */}
+      {/* ============================== */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Card 1: This Month */}
+        <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-6 shadow-lg shadow-blue-900/20 text-white relative overflow-hidden group transition hover:-translate-y-1">
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl"></div>
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <p className="text-xs font-bold text-blue-200 uppercase tracking-widest mb-1">Installs This Month</p>
+              <div className="flex items-end gap-2 mt-2">
+                 <p className="text-5xl font-black tracking-tighter">{installsThisMonth}</p>
+                 <p className="text-sm font-bold text-blue-200 mb-1.5">Vehicles</p>
               </div>
             </div>
+            <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+              <Activity size={24} className="text-white" />
+            </div>
+          </div>
+        </div>
 
-            {/* SECTION B: LEAD PIPELINE */}
-            <div className="flex flex-col">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <Users className="text-orange-500" /> Sales Pipeline Health
-              </h3>
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex-1">
-                
-                <div className="mb-6 flex justify-between items-end">
-                  <div>
-                    <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Total Leads Logged</p>
-                    <h3 className="text-4xl font-bold text-gray-900">{stats.totalLeads}</h3>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Conversion Rate</p>
-                    <h3 className="text-2xl font-bold text-[#84c47c]">
-                      {Math.round((stats.leadsConverted / Math.max(stats.totalLeads, 1)) * 100)}%
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center bg-[#e0f2de]/50 p-3 rounded-xl border border-[#84c47c]/30">
-                    <span className="flex items-center gap-2 text-sm font-bold text-green-800"><TrendingUp size={16}/> Successfully Onboarded</span>
-                    <span className="font-bold text-green-800">{stats.leadsConverted}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-orange-50 p-3 rounded-xl border border-orange-100">
-                    <span className="flex items-center gap-2 text-sm font-bold text-orange-800"><AlertCircle size={16}/> Pending / In Progress</span>
-                    <span className="font-bold text-orange-800">{stats.leadsUnconverted}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
-                    <span className="flex items-center gap-2 text-sm font-bold text-gray-600"><BarChart3 size={16}/> Lost / Cancelled Leads</span>
-                    <span className="font-bold text-gray-600">{stats.leadsLost}</span>
-                  </div>
-                </div>
-
+        {/* Card 2: This Week */}
+        <div className="bg-gradient-to-br from-[#84c47c] to-[#5a9a52] rounded-3xl p-6 shadow-lg shadow-green-900/20 text-white relative overflow-hidden group transition hover:-translate-y-1">
+          <div className="absolute bottom-0 right-0 -mb-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <p className="text-xs font-bold text-green-100 uppercase tracking-widest mb-1">Installs This Week</p>
+              <div className="flex items-end gap-2 mt-2">
+                 <p className="text-5xl font-black tracking-tighter">{installsThisWeek}</p>
+                 <p className="text-sm font-bold text-green-100 mb-1.5">Vehicles</p>
               </div>
             </div>
+            <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+              <TrendingUp size={24} className="text-white" />
+            </div>
+          </div>
+        </div>
 
+        {/* Card 3: Last Week */}
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-6 shadow-lg shadow-gray-900/20 text-white relative overflow-hidden group transition hover:-translate-y-1">
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Installs Last Week</p>
+              <div className="flex items-end gap-2 mt-2">
+                 <p className="text-5xl font-black tracking-tighter text-gray-100">{installsLastWeek}</p>
+                 <p className="text-sm font-bold text-gray-500 mb-1.5">Vehicles</p>
+              </div>
+            </div>
+            <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
+              <Calendar size={24} className="text-gray-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================== */}
+      {/* ROW 2: PIPELINES & CONVERSION  */}
+      {/* ============================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        
+        {/* LEADS & CHART (Takes up 2 columns on desktop) */}
+        <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-8">
+          <div className="flex-1 w-full">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span> Lead Conversion Pipeline
+            </h3>
+            <div className="flex items-center justify-start gap-8">
+              <div>
+                <p className="text-3xl font-black text-gray-800">{totalLeads}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Total Leads</p>
+              </div>
+              <div className="h-10 w-px bg-gray-200"></div>
+              <div>
+                <p className="text-3xl font-black text-[#84c47c]">{convertedLeads}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Converted</p>
+              </div>
+            </div>
           </div>
           
-          {/* Charts (Jobs & Leads only) */}
-          <DashboardCharts stats={stats} />
+          {/* Stunning Donut Chart */}
+          <div className="flex flex-col items-center justify-center shrink-0">
+            <div className="relative w-24 h-24 rounded-full flex items-center justify-center shadow-sm" style={{ background: `conic-gradient(#3b82f6 ${conversionRate}%, #f3f4f6 ${conversionRate}%)` }}>
+               <div className="absolute w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-inner">
+                 <span className="text-xl font-black text-gray-800">{conversionRate}%</span>
+               </div>
+            </div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase mt-3 tracking-widest">Success Rate</p>
+          </div>
         </div>
-      )}
+
+        {/* INVENTORY */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-500"></span> Shelf Inventory
+            </h3>
+            <div className="space-y-4 w-full">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl shadow-sm"><Cpu size={16} className="text-indigo-500"/></div>
+                  <span className="text-sm font-bold text-gray-600">Devices</span>
+                </div>
+                <span className="text-xl font-black text-gray-900">{unusedDevices}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl shadow-sm"><Smartphone size={16} className="text-indigo-500"/></div>
+                  <span className="text-sm font-bold text-gray-600">SIM Cards</span>
+                </div>
+                <span className="text-xl font-black text-gray-900">{unusedSims}</span>
+              </div>
+            </div>
+        </div>
+
+      </div>
+
+      {/* ============================== */}
+      {/* ROW 3: BOTTLENECKS & ALERTS    */}
+      {/* ============================== */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        {/* SUPPORT PENDING */}
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition hover:shadow-md">
+          <div className="bg-orange-50 p-4 rounded-2xl text-orange-500"><Wrench size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pending Support</p>
+            <p className="text-2xl font-black text-gray-800 mt-0.5">{pendingSupport}</p>
+          </div>
+        </div>
+
+        {/* IN TECH QUEUE */}
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition hover:shadow-md">
+          <div className="bg-yellow-50 p-4 rounded-2xl text-yellow-600"><AlertCircle size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">In Tech Queue</p>
+            <p className="text-2xl font-black text-gray-800 mt-0.5">{inTech}</p>
+          </div>
+        </div>
+
+        {/* ONBOARDING QUEUE */}
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition hover:shadow-md">
+          <div className="bg-purple-50 p-4 rounded-2xl text-purple-500"><Smartphone size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Awaiting Login</p>
+            <p className="text-2xl font-black text-gray-800 mt-0.5">{inOnboarding}</p>
+          </div>
+        </div>
+
+        {/* UNPAID JOBS */}
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition hover:shadow-md">
+          <div className="bg-red-50 p-4 rounded-2xl text-red-500"><DollarSign size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unpaid Jobs</p>
+            <p className="text-2xl font-black text-gray-800 mt-0.5">{pendingPayments}</p>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ============================== */}
+      {/* FILTERABLE INSTALLATIONS LIST  */}
+      {/* ============================== */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mt-8">
+         <div className="p-6 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50/50">
+            <div>
+               <h3 className="font-bold text-gray-900 flex items-center gap-2 text-lg">
+                 <CheckCircle2 size={20} className="text-[#84c47c]"/> {displayFilterName} Installations
+               </h3>
+               <p className="text-xs text-gray-500 mt-1 font-medium">Total confirmed installs for this period: <span className="font-bold text-gray-800 bg-gray-200 px-2 py-0.5 rounded-full ml-1">{filteredInstallsList.length}</span></p>
+            </div>
+            <OverviewFilter />
+         </div>
+         
+         <div className="overflow-x-auto max-h-[500px] overflow-y-auto custom-scrollbar">
+           <table className="min-w-full divide-y divide-gray-100">
+             <thead className="bg-white sticky top-0 z-10 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+               <tr>
+                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Install Date</th>
+                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Vehicle</th>
+                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Client</th>
+                 <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">IMEI / Tracker</th>
+               </tr>
+             </thead>
+             <tbody className="divide-y divide-gray-50">
+               {filteredInstallsList.map((job) => (
+                 <tr key={job.id} className="hover:bg-gray-50/80 transition group">
+                   <td className="px-6 py-4">
+                     <span className="text-[11px] font-bold text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-1.5 rounded-lg shadow-sm">
+                       {job.installDate ? new Date(job.installDate).toLocaleDateString('en-GB') : 'Unknown'}
+                     </span>
+                   </td>
+                   <td className="px-6 py-4">
+                     <div className="font-bold text-sm text-gray-900 flex items-center gap-2"><Car size={14} className="text-gray-400 group-hover:text-blue-500 transition" /> {job.vehicle.name}</div>
+                     <div className="text-[11px] text-gray-400 font-mono mt-1 font-medium flex items-center gap-1"><Hash size={10}/> {job.vehicle.plateNumber || "NO PLATE"}</div>
+                   </td>
+                   <td className="px-6 py-4">
+                     <Link href={`/dashboard/clients/${job.vehicle.clientId}`} className="font-bold text-xs text-blue-600 hover:text-blue-800 transition flex items-center gap-1.5 bg-blue-50 w-fit px-3 py-1.5 rounded-lg border border-blue-100">
+                       <User size={12}/> {job.vehicle.client.fullName}
+                     </Link>
+                   </td>
+                   <td className="px-6 py-4 text-right">
+                     <div className="text-xs font-mono font-bold text-gray-700 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100 inline-block">
+                       {job.device?.imei || 'Unknown'}
+                     </div>
+                   </td>
+                 </tr>
+               ))}
+             </tbody>
+           </table>
+           {filteredInstallsList.length === 0 && (
+             <div className="p-16 text-center flex flex-col items-center justify-center bg-gray-50/30">
+                <div className="bg-gray-100 p-4 rounded-full mb-3">
+                   <AlertCircle size={32} className="text-gray-400"/>
+                </div>
+                <p className="text-gray-500 font-medium text-sm">No installations found for {displayFilterName}.</p>
+             </div>
+           )}
+         </div>
+      </div>
+
     </div>
   )
 }
