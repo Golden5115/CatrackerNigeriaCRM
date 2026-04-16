@@ -91,21 +91,21 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* PREMIUM INVOICE DOCUMENT */}
-      <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-8 sm:p-16 print:shadow-none print:border-none print:p-10 print:rounded-none relative overflow-hidden text-gray-800">
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-4 sm:p-16 print:shadow-none print:border-none print:p-10 print:rounded-none relative overflow-hidden text-gray-800">
         
         <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-[#84c47c] to-blue-600 print:hidden"></div>
 
         {/* HEADER SECTION */}
         <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-4 border-b border-gray-100 pb-12 print:flex-row print:items-start print:gap-4">
-          <div className="space-y-4 print:w-1/2">
-            <div className="flex-row items-center gap-4">
+          <div className="space-y-4 print:w-1/2 ">
+            <div className="flex-row items-center gap-4  ">
                <img 
                  src="/logo2.png" 
                  alt="Car Tracker Nigeria Logo" 
                  className="w-30 h-30 object-contain print:w-50 print:h-50" 
                />
                <div>
-                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest print:text-[8px]">Premium Telematics Solutions</p>
+                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest print:text-[10px] ">Premium Telematics Solutions</p>
                </div>
             </div>
             
@@ -117,7 +117,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          <div className="text-left md:text-right print:text-right print:w-1/2">
+          <div className="text-left md:text-right print:text-right print:w-1/2 mt-8">
             <h2 className="text-4xl sm:text-5xl font-black text-black-600 uppercase tracking-tighter mb-2 print:text-4xl">Invoice</h2>
             <p className="text-lg font-bold text-gray-900 print:text-base">{invoice.invoiceNumber || `#INV-${invoice.id.slice(-6).toUpperCase()}`}</p>
             
