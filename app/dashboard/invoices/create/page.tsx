@@ -9,7 +9,6 @@ export default function CreateInvoicePage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Client Details State
   const [clientSearch, setClientSearch] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -20,15 +19,12 @@ export default function CreateInvoicePage() {
   const [clientPhone, setClientPhone] = useState("")
   const [clientAddress, setClientAddress] = useState("")
 
-  // Invoice Details State
   const [subject, setSubject] = useState("")
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0])
   const [dueDate, setDueDate] = useState("")
   
-  // Line Items State
   const [items, setItems] = useState([{ description: "", quantity: 1, unitPrice: 0 }])
   
-  // Financials & Bank State
   const [discountType, setDiscountType] = useState<'FIXED' | 'PERCENTAGE'>('PERCENTAGE')
   const [discountValue, setDiscountValue] = useState(0)
   const [taxPercentage, setTaxPercentage] = useState(0)
@@ -38,14 +34,12 @@ export default function CreateInvoicePage() {
   const [accountName, setAccountName] = useState("")
   const [accountNumber, setAccountNumber] = useState("")
 
-  // --- LIVE MATH CALCULATOR ---
   const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   const discountAmount = discountType === 'PERCENTAGE' ? subtotal * (discountValue / 100) : discountValue;
   const taxableAmount = subtotal - discountAmount;
   const taxAmount = taxableAmount * (taxPercentage / 100);
   const total = taxableAmount + taxAmount;
 
-  // --- SMART MEMORY: LOAD DEFAULTS ON MOUNT ---
   useEffect(() => {
     async function loadDefaults() {
       const defaults = await getLastInvoiceDefaults();
@@ -59,7 +53,6 @@ export default function CreateInvoicePage() {
     loadDefaults();
   }, []);
   
-  // --- CLIENT SEARCH ENGINE ---
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (clientSearch.length >= 2 && clientSearch !== clientName) {
@@ -84,7 +77,6 @@ export default function CreateInvoicePage() {
     setSearchResults([])
   }
 
-  // --- FORM SUBMISSION ---
   const handleSubmit = async () => {
     if (!clientName || items.some(i => !i.description)) return alert("Client Name and Item Descriptions are required.")
     setIsSubmitting(true)
@@ -116,18 +108,16 @@ export default function CreateInvoicePage() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         
-        {/* --- BRANDED HEADER --- */}
-        <div className="bg-[#84c47c] p-6 text-white flex justify-between items-center">
-           <h3 className="text-2xl font-bold tracking-widest uppercase opacity-90">Invoice Details</h3>
-           <div className="text-right">
-             <div className="text-sm font-bold opacity-80 uppercase">Total Amount</div>
-             <div className="text-3xl font-bold">₦{total.toLocaleString()}</div>
+        <div className="bg-[#84c47c] p-4 sm:p-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+           <h3 className="text-xl sm:text-2xl font-bold tracking-widest uppercase opacity-90">Invoice Details</h3>
+           <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-white/20 pt-4 sm:pt-0">
+             <div className="text-xs sm:text-sm font-bold opacity-80 uppercase">Total Amount</div>
+             <div className="text-2xl sm:text-3xl font-bold">₦{total.toLocaleString()}</div>
            </div>
         </div>
 
-        <div className="p-8 space-y-8">
+        <div className="p-4 sm:p-8 space-y-8">
           
-          {/* --- TOP ROW: CLIENT & DATES --- */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
             {/* Left: Client Info */}
@@ -146,7 +136,6 @@ export default function CreateInvoicePage() {
                    />
                  </div>
                  
-                 {/* Search Dropdown */}
                  {searchResults.length > 0 && (
                    <div className="absolute z-50 w-full mt-1 bg-white border shadow-xl rounded-lg overflow-hidden">
                      {searchResults.map(c => (
@@ -159,7 +148,8 @@ export default function CreateInvoicePage() {
                  )}
                </div>
 
-               <div className="grid grid-cols-2 gap-4">
+               {/* 🟢 FIXED: Changed grid-cols-2 to grid-cols-1 md:grid-cols-2 to stack on mobile */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone</label>
                    <input value={clientPhone} onChange={(e)=>setClientPhone(e.target.value)} className="w-full p-2.5 border rounded-lg outline-none" />
@@ -182,7 +172,8 @@ export default function CreateInvoicePage() {
                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Invoice Subject / Project Name</label>
                  <input value={subject} onChange={(e)=>setSubject(e.target.value)} placeholder="e.g. Fleet Installation - 5 Vehicles" className="w-full p-2.5 border rounded-lg outline-none" />
                </div>
-               <div className="grid grid-cols-2 gap-4">
+               {/* 🟢 FIXED: Changed grid-cols-2 to grid-cols-1 md:grid-cols-2 to stack on mobile */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Issue Date</label>
                    <input type="date" value={issueDate} onChange={(e)=>setIssueDate(e.target.value)} className="w-full p-2.5 border rounded-lg outline-none" />
@@ -201,38 +192,39 @@ export default function CreateInvoicePage() {
               <h4 className="font-bold text-gray-800">Line Items</h4>
             </div>
             
-            <div className="bg-gray-50 rounded-xl p-1">
-              {/* Table Headers */}
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                <div className="col-span-6">Description</div>
-                <div className="col-span-2 text-center">Qty / Rate</div>
-                <div className="col-span-2 text-right">Unit Price (₦)</div>
-                <div className="col-span-2 text-right">Amount</div>
-              </div>
-
-              {items.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded-lg mb-1 border border-gray-100 shadow-sm relative group">
-                  <div className="col-span-6">
-                    <input value={item.description} onChange={(e) => { const newItems = [...items]; newItems[index].description = e.target.value; setItems(newItems); }} placeholder="Item description..." className="w-full p-2 border border-transparent hover:border-gray-200 focus:border-[#84c47c] rounded outline-none text-sm font-medium" />
-                  </div>
-                  <div className="col-span-2">
-                    <input type="number" min="1" value={item.quantity} onChange={(e) => { const newItems = [...items]; newItems[index].quantity = Number(e.target.value); setItems(newItems); }} className="w-full p-2 border border-transparent hover:border-gray-200 focus:border-[#84c47c] rounded outline-none text-sm text-center" />
-                  </div>
-                  <div className="col-span-2">
-                    <input type="number" value={item.unitPrice} onChange={(e) => { const newItems = [...items]; newItems[index].unitPrice = Number(e.target.value); setItems(newItems); }} className="w-full p-2 border border-transparent hover:border-gray-200 focus:border-[#84c47c] rounded outline-none text-sm text-right" />
-                  </div>
-                  <div className="col-span-2 text-right font-bold text-gray-800 pr-2">
-                    ₦{(item.quantity * item.unitPrice).toLocaleString()}
-                  </div>
-                  
-                  {/* Delete Row Button */}
-                  {items.length > 1 && (
-                    <button onClick={() => { const newItems = [...items]; newItems.splice(index, 1); setItems(newItems); }} className="absolute -left-3 -top-2 bg-red-100 text-red-600 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition shadow-sm">
-                      <Trash2 size={12} />
-                    </button>
-                  )}
+            {/* 🟢 FIXED: Wrapped the items in overflow-x-auto and min-w-[700px] so it safely scrolls horizontally on mobile without squishing */}
+            <div className="bg-gray-50 rounded-xl p-1 overflow-x-auto w-full custom-scrollbar">
+              <div className="min-w-[700px]">
+                <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  <div className="col-span-6">Description</div>
+                  <div className="col-span-2 text-center">Qty / Rate</div>
+                  <div className="col-span-2 text-right">Unit Price (₦)</div>
+                  <div className="col-span-2 text-right">Amount</div>
                 </div>
-              ))}
+
+                {items.map((item, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded-lg mb-1 border border-gray-100 shadow-sm relative group">
+                    <div className="col-span-6">
+                      <input value={item.description} onChange={(e) => { const newItems = [...items]; newItems[index].description = e.target.value; setItems(newItems); }} placeholder="Item description..." className="w-full p-2 border border-transparent hover:border-gray-200 focus:border-[#84c47c] rounded outline-none text-sm font-medium" />
+                    </div>
+                    <div className="col-span-2">
+                      <input type="number" min="1" value={item.quantity} onChange={(e) => { const newItems = [...items]; newItems[index].quantity = Number(e.target.value); setItems(newItems); }} className="w-full p-2 border border-transparent hover:border-gray-200 focus:border-[#84c47c] rounded outline-none text-sm text-center" />
+                    </div>
+                    <div className="col-span-2">
+                      <input type="number" value={item.unitPrice} onChange={(e) => { const newItems = [...items]; newItems[index].unitPrice = Number(e.target.value); setItems(newItems); }} className="w-full p-2 border border-transparent hover:border-gray-200 focus:border-[#84c47c] rounded outline-none text-sm text-right" />
+                    </div>
+                    <div className="col-span-2 text-right font-bold text-gray-800 pr-2">
+                      ₦{(item.quantity * item.unitPrice).toLocaleString()}
+                    </div>
+                    
+                    {items.length > 1 && (
+                      <button onClick={() => { const newItems = [...items]; newItems.splice(index, 1); setItems(newItems); }} className="absolute -left-3 -top-2 bg-red-100 text-red-600 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition shadow-sm">
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <button onClick={() => setItems([...items, { description: "", quantity: 1, unitPrice: 0 }])} className="text-sm font-bold text-[#84c47c] flex items-center gap-1 hover:text-[#6aa663] px-2 py-2">
@@ -241,7 +233,7 @@ export default function CreateInvoicePage() {
           </div>
 
           {/* --- BOTTOM ROW: TOTALS & BANK DETAILS --- */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-6 border-t">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 pt-6 border-t">
             
             {/* Left: Notes & Bank */}
             <div className="space-y-6">
@@ -260,7 +252,7 @@ export default function CreateInvoicePage() {
             </div>
 
             {/* Right: Calculations */}
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 h-fit space-y-4">
+            <div className="bg-gray-50 rounded-2xl p-4 sm:p-6 border border-gray-200 h-fit space-y-4">
                <div className="flex justify-between items-center text-sm font-bold text-gray-600">
                  <span>Subtotal</span>
                  <span>₦{subtotal.toLocaleString()}</span>
@@ -289,13 +281,13 @@ export default function CreateInvoicePage() {
 
                <hr className="border-gray-300" />
                
-               <div className="flex justify-between items-center text-xl font-bold text-[#84c47c]">
+               <div className="flex justify-between items-center text-lg sm:text-xl font-bold text-[#84c47c]">
                  <span>Total Due</span>
                  <span>₦{total.toLocaleString()}</span>
                </div>
 
                <button onClick={handleSubmit} disabled={isSubmitting} className="w-full mt-4 bg-[#84c47c] text-white py-4 rounded-xl font-bold hover:bg-[#6aa663] transition shadow-lg shadow-green-500/20 flex justify-center items-center gap-2 text-lg">
-                 {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : <><Save size={24}/> Save & Generate Invoice</>}
+                 {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : <><Save size={24}/> Save Invoice</>}
                </button>
             </div>
 

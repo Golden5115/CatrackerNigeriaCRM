@@ -8,8 +8,8 @@ export default async function InvoicesList() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 pb-12">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold text-gray-800">Invoices</h2>
           <p className="text-gray-500">Manage all billing and receipts.</p>
@@ -19,40 +19,39 @@ export default async function InvoicesList() {
         </Link>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+      {/* 🟢 FIXED: Added overflow-x-auto and w-full so the table can be swiped on phones */}
+      <div className="bg-white border rounded-xl shadow-sm overflow-hidden overflow-x-auto w-full custom-scrollbar">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Invoice No.</th>
-              {/* 👇 NEW: Date Created Column Header */}
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date Created</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Client</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Action</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase whitespace-nowrap">Invoice No.</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase whitespace-nowrap">Date Created</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase whitespace-nowrap">Client</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase whitespace-nowrap">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase whitespace-nowrap">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase whitespace-nowrap">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {invoices.map(inv => (
               <tr key={inv.id} className="hover:bg-gray-50 transition">
-                <td className="px-6 py-4 font-mono font-bold text-sm text-gray-900">{inv.invoiceNumber}</td>
+                <td className="px-6 py-4 font-mono font-bold text-sm text-gray-900 whitespace-nowrap">{inv.invoiceNumber}</td>
                 
-                {/* 👇 NEW: Date Created Cell showing both Date and Time */}
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="font-bold text-sm text-gray-800">{new Date(inv.createdAt).toLocaleDateString('en-GB')}</div>
                   <div className="text-xs text-gray-500 mt-0.5">{new Date(inv.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
                 </td>
 
-                <td className="px-6 py-4 text-sm font-medium text-gray-700">{inv.clientName}</td>
-                <td className="px-6 py-4 font-bold text-gray-900">₦{Number(inv.total).toLocaleString()}</td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 text-sm font-medium text-gray-700 whitespace-nowrap">{inv.clientName}</td>
+                <td className="px-6 py-4 font-bold text-gray-900 whitespace-nowrap">₦{Number(inv.total).toLocaleString()}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   {inv.status === 'PAID' ? 
                     <span className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded w-fit"><CheckCircle size={12}/> PAID</span> :
                     <span className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded w-fit"><AlertCircle size={12}/> UNPAID</span>
                   }
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <Link href={`/dashboard/invoices/${inv.id}`} className="text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded-lg text-xs hover:bg-blue-100 transition">Open Invoice</Link>
+                <td className="px-6 py-4 text-right whitespace-nowrap">
+                  <Link href={`/dashboard/invoices/${inv.id}`} className="text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded-lg text-xs hover:bg-blue-100 transition inline-block">Open Invoice</Link>
                 </td>
               </tr>
             ))}
