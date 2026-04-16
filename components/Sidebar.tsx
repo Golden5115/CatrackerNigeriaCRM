@@ -17,18 +17,16 @@ import LoadingLink from "@/components/LoadingLink";
 const allMenuItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard, requiredModule: null }, 
   { name: "My Profile", href: "/dashboard/profile", icon: User, requiredModule: null },
-  { name: "Sales Pipeline", href: "/dashboard/leads", icon: Users, requiredModule: "/dashboard/leads" },
-  
-  // 👇 NEW SUPPORT MODULE
-  { name: "Support Tickets", href: "/dashboard/support", icon: Wrench, requiredModule: null },
-  
-  { name: "Inventory", href: "/dashboard/inventory", icon: Package, requiredModule: "/dashboard/inventory" },
-  { name: "Tech Support", href: "/dashboard/tech", icon: Server, requiredModule: "/dashboard/tech" },
-  { name: "Client Onboarding", href: "/dashboard/activation", icon: Smartphone, requiredModule: "/dashboard/activation" },
-  { name: "Client Database", href: "/dashboard/clients", icon: Briefcase, requiredModule: "/dashboard/clients" },
-  { name: "Fleet & Vehicles", href: "/dashboard/vehicles", icon: Car, module: "Fleet & Vehicles" },
-  { name: "Payments", href: "/dashboard/payments", icon: CreditCard, requiredModule: "/dashboard/payments" },
-  { name: "Invoices", href: "/dashboard/invoices", icon: FileText, requiredModule: null },
+  // 🟢 FIXED: The requiredModule now strictly matches the exact names from the checkboxes
+  { name: "Sales Pipeline", href: "/dashboard/leads", icon: Users, requiredModule: "Sales Pipeline" },
+  { name: "Support Tickets", href: "/dashboard/support", icon: Wrench, requiredModule: "Support Tickets" },
+  { name: "Inventory", href: "/dashboard/inventory", icon: Package, requiredModule: "Inventory" },
+  { name: "Tech Support", href: "/dashboard/tech", icon: Server, requiredModule: "Tech Support" },
+  { name: "Client Onboarding", href: "/dashboard/activation", icon: Smartphone, requiredModule: "Activation" },
+  { name: "Client Database", href: "/dashboard/clients", icon: Briefcase, requiredModule: "Client Database" },
+  { name: "Fleet & Vehicles", href: "/dashboard/vehicles", icon: Car, requiredModule: "Fleet & Vehicles" },
+  { name: "Payments", href: "/dashboard/payments", icon: CreditCard, requiredModule: "Payments" },
+  { name: "Invoices", href: "/dashboard/invoices", icon: FileText, requiredModule: "Invoices" },
   { name: "Revenue Analysis", href: "/dashboard/revenue", icon: TrendingUp, adminOnly: true },
   { name: "Team & Roles", href: "/dashboard/users", icon: Shield, adminOnly: true }, 
 ];

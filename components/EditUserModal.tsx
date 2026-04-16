@@ -5,7 +5,7 @@ import { updateUser } from "@/app/actions/users"
 import { Loader2, UserCog, X, ShieldAlert } from "lucide-react"
 
 const AVAILABLE_MODULES = [
-  "Dashboard", "Sales Pipeline", "Client Database", "Fleet & Vehicles", "Payments", "Invoices", 
+  "Dashboard", "Sales Pipeline", "Support Tickets", "Client Database", "Fleet & Vehicles", "Payments", "Invoices", // 👈 ADDED HERE
   "Inventory", "Tech Support", "Activation", "Revenue Analytics", "Team"
 ];
 
