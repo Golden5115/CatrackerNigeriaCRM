@@ -7,28 +7,24 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  // 1. Get the current logged-in session
   const session = await verifySession()
-  
-  // 👇 FIX: Explicitly extract the userId as a string
   const userId = typeof session?.userId === 'string' ? session.userId : null;
   
-  // 2. Fetch their exact user profile and permissions from the DB using the safe string
   const user = userId 
     ? await prisma.user.findUnique({ where: { id: userId } })
     : null
 
   return (
-    // 👇 ADDED: flex-col md:flex-row 
-    <div className="flex h-screen overflow-hidden bg-gray-50 flex-col md:flex-row">
+    // 🟢 FIXED: Added print:h-auto print:overflow-visible print:block to break out of the screen height
+    <div className="flex h-screen overflow-hidden bg-gray-50 flex-col md:flex-row print:h-auto print:overflow-visible print:block">
       
-      {/* 3. Hand the secure permissions directly to the Sidebar */}
       <Sidebar 
         userRole={user?.role} 
         accessibleModules={user?.accessibleModules || []} 
       />
       
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+      {/* 🟢 FIXED: Added print:overflow-visible print:h-auto print:block so the content expands across multiple pages naturally */}
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 print:overflow-visible print:h-auto print:block print:p-0">
         {children}
       </main>
     </div>

@@ -46,7 +46,8 @@ export default function Sidebar({
   return (
     <>
       {/* --- MOBILE TOP BAR --- */}
-      <div className="md:hidden flex items-center justify-between bg-[#2d4a2a] p-4 text-white shrink-0 shadow-md z-40 relative">
+      {/* 👇 Added print:hidden here */}
+      <div className="md:hidden flex items-center justify-between bg-[#2d4a2a] p-4 text-white shrink-0 shadow-md z-40 relative print:hidden">
         <Logo textClassName="text-white" showText={true} />
         <button onClick={() => setIsMobileOpen(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition">
           <Menu size={24} />
@@ -56,13 +57,14 @@ export default function Sidebar({
       {/* --- MOBILE OVERLAY --- */}
       {isMobileOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity" 
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity print:hidden" 
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* --- SIDEBAR (Desktop & Mobile Drawer) --- */}
-      <div className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between border-r bg-[#2d4a2a] text-white transition-all duration-300 ease-in-out shadow-2xl shrink-0
+      {/* 👇 Added print:hidden here as well */}
+      <div className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between border-r bg-[#2d4a2a] text-white transition-all duration-300 ease-in-out shadow-2xl shrink-0 print:hidden
         ${isCollapsed ? 'md:w-20' : 'md:w-64'} 
         ${isMobileOpen ? 'w-72 translate-x-0' : '-translate-x-full md:translate-x-0 md:relative'}
       `}>
