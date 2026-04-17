@@ -13,13 +13,11 @@ export async function markPaymentAsDone(formData: FormData) {
     data: {
       paymentStatus: 'PAID',
       amountPaid: parseFloat(amount), 
-      paymentCollector: collector,    
-      // 🛑 FIX: We removed `status: 'ACTIVE'` from here. 
-      // Payment should never alter the pipeline timeline!
+      paymentCollector: collector, 
+      paymentDate: new Date(), // 👈 NEW: Records the exact moment payment was confirmed   
     }
   })
 
-  // Refresh all relevant pages
   revalidatePath('/dashboard/payments')
   revalidatePath('/dashboard/clients')
   revalidatePath('/dashboard/revenue')

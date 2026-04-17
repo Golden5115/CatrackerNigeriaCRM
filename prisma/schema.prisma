@@ -102,6 +102,7 @@ model Job {
   paymentStatus     String    @default("UNPAID")
   amountPaid        Decimal   @default(0.00)
   paymentCollector  String?
+  paymentDate       DateTime?
   deviceId          String?   @unique
   installerId       String?
   simCardId         String?   @unique
