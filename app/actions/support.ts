@@ -3,148 +3,93 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
-export async function processHardwareSwap(formData: FormData) {
-  const jobId = formData.get('jobId') as string
-  const vehicleId = formData.get('vehicleId') as string
-  const swapType = formData.get('swapType') as 'DEVICE' | 'SIM'
-  const newHardwareId = formData.get('newHardwareId') as string // The ID of the new item they picked from stock
+export async function getSupportTickets() {
+  return await prisma.support.findMany({ 
+    orderBy: { date: 'desc' } 
+  })
+}
 
-  try {
-    // 1. Find the Vehicle's previous hardware by looking at its past jobs
-    const vehicle = await prisma.vehicle.findUnique({
-      where: { id: vehicleId },
-      include: { 
-        jobs: { 
-          orderBy: { createdAt: 'desc' },
-          // We look for jobs that actually had hardware assigned to find the "old" one
-          where: { OR: [{ deviceId: { not: null } }, { simCardId: { not: null } }] }
-        } 
-      }
-    })
-
-    const previousJob = vehicle?.jobs[0] // The most recent installation/swap
-
-    // 2. Perform the Swap in a secure Prisma Transaction
-    await prisma.$transaction(async (tx) => {
-      
-      if (swapType === 'DEVICE') {
-        // A. Mark the old device as FAULTY (if it existed)
-        if (previousJob?.deviceId) {
-          await tx.device.update({
-            where: { id: previousJob.deviceId },
-            data: { status: 'FAULTY' }
-          })
-        }
-
-        // B. Mark the new device as INSTALLED
-        await tx.device.update({
-          where: { id: newHardwareId },
-          data: { status: 'INSTALLED' }
-        })
-
-        // C. Update the current Support Ticket to reflect the swap
-        await tx.job.update({
-          where: { id: jobId },
-          data: { 
-            deviceId: newHardwareId, 
-            jobType: 'DEVICE_REPLACEMENT',
-            status: 'PENDING_QC' // Send back to tech support to verify the new tracker!
-          }
-        })
-      } 
-      
-      else if (swapType === 'SIM') {
-        // A. Mark old SIM as FAULTY
-        if (previousJob?.simCardId) {
-          await tx.simCard.update({
-            where: { id: previousJob.simCardId },
-            data: { status: 'FAULTY' }
-          })
-        }
-
-        // B. Mark new SIM as INSTALLED
-        await tx.simCard.update({
-          where: { id: newHardwareId },
-          data: { status: 'INSTALLED' }
-        })
-
-        // C. Update Job
-        await tx.job.update({
-          where: { id: jobId },
-          data: { 
-            simCardId: newHardwareId, 
-            jobType: 'SIM_REPLACEMENT',
-            status: 'PENDING_QC'
-          }
-        })
-      }
-    })
-
-    revalidatePath('/dashboard/leads')
-    return { success: true }
-    
-  } catch (error) {
-    console.error("Swap Error:", error)
-    return { error: "Failed to process hardware swap. Please try again." }
-  }
+export async function getAvailableInventory() {
+  // We fetch the data...
+  const [devices, simCards, oldDevices, oldSims] = await Promise.all([
+    prisma.device.findMany({ where: { status: 'IN_STOCK' } }),
+    prisma.simCard.findMany({ where: { status: 'IN_STOCK' } }),
+    prisma.device.findMany({ where: { status: { in: ['INSTALLED', 'FAULTY'] } } }),
+    prisma.simCard.findMany({ where: { status: { in: ['INSTALLED', 'FAULTY'] } } })
+  ]);
+  
+  // 🟢 THE FIX: Make sure we are returning oldDevices and oldSims here!
+  return { 
+    devices, 
+    simCards, 
+    oldDevices, 
+    oldSims 
+  };
 }
 
 export async function createSupportTicket(formData: FormData) {
-  const fullName = formData.get('fullName') as string
-  const phoneNumber = formData.get('phoneNumber') as string
-  const plateNumber = formData.get('plateNumber') as string
-  const jobType = formData.get('jobType') as any
-  const supportNotes = formData.get('supportNotes') as string
+  const clientName = formData.get('clientName') as string
+  const address = formData.get('address') as string
+  const issue = formData.get('issue') as string
+  const manualDate = formData.get('date') as string 
 
-  if (!fullName || !phoneNumber || !plateNumber || !jobType) {
-    return { error: "Please fill in all required fields." }
-  }
-
-  try {
-    // 1. SMART LOOKUP: Find existing client or create a new one instantly
-    let client = await prisma.client.findUnique({ where: { phoneNumber } })
-    if (!client) {
-      client = await prisma.client.create({ data: { fullName, phoneNumber } })
+  await prisma.support.create({
+    data: {
+      clientName,
+      address,
+      issue,
+      date: new Date(manualDate), 
+      status: 'PENDING'
     }
-
-    // 2. Find existing vehicle or create a new one for this client
-    let vehicle = await prisma.vehicle.findFirst({
-      where: { plateNumber, clientId: client.id }
-    })
-    
-    if (!vehicle) {
-      vehicle = await prisma.vehicle.create({
-        data: { name: 'Support Vehicle', plateNumber, clientId: client.id }
-      })
-    }
-
-    // 3. Create the Support Ticket and drop it into the Sales Pipeline
-    await prisma.job.create({
-      data: {
-        vehicleId: vehicle.id,
-        status: 'NEW_LEAD', // Puts it in the very first column for dispatch
-        jobType: jobType,
-        supportNotes: supportNotes
-      }
-    })
-
-    revalidatePath('/dashboard/leads')
-    return { success: true }
-  } catch (error) {
-    console.error(error)
-    return { error: "Failed to create support ticket." }
-  }
+  })
+  revalidatePath('/dashboard/support')
 }
 
-export async function resolveMaintenanceJob(jobId: string) {
-  try {
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { status: 'PENDING_QC' } // Send to Tech Support to verify it's back online!
-    })
-    revalidatePath('/dashboard/leads')
-    return { success: true }
-  } catch (error) {
-    return { error: "Failed to close ticket." }
+export async function resolveSupportTicket(formData: FormData) {
+  const id = formData.get('id') as string
+  
+  const imei = formData.get('imei') as string
+  const trackerSim = formData.get('trackerSim') as string
+  const oldImei = formData.get('oldImei') as string
+  const oldTrackerSim = formData.get('oldTrackerSim') as string
+
+  // 1. Update the Support Ticket
+  await prisma.support.update({
+    where: { id },
+    data: {
+      vehicleName: formData.get('vehicleName') as string,
+      installerName: formData.get('installerName') as string,
+      imei: imei || null, 
+      trackerSim: trackerSim || null, 
+      oldImei: oldImei || null,
+      oldTrackerSim: oldTrackerSim || null,
+      process: formData.get('process') as string,
+      status: 'RESOLVED'
+    }
+  })
+
+  // 2. Mark NEW Hardware as INSTALLED
+  if (imei) {
+    await prisma.device.updateMany({ where: { imei }, data: { status: 'INSTALLED' } });
   }
+  if (trackerSim) {
+    await prisma.simCard.updateMany({ where: { simNumber: trackerSim }, data: { status: 'INSTALLED' } });
+  }
+
+  // 3. Mark OLD Hardware as FAULTY
+  if (oldImei) {
+    await prisma.device.updateMany({ where: { imei: oldImei }, data: { status: 'FAULTY' } });
+  }
+  if (oldTrackerSim) {
+    await prisma.simCard.updateMany({ where: { simNumber: oldTrackerSim }, data: { status: 'FAULTY' } });
+  }
+
+  revalidatePath('/dashboard/support')
+  revalidatePath('/dashboard/inventory')
+}
+
+export async function deleteSupportTicket(formData: FormData) {
+  const id = formData.get('id') as string
+  await prisma.support.delete({ where: { id } })
+  revalidatePath('/dashboard/support')
 }
