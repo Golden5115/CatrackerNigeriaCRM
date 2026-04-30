@@ -208,33 +208,3 @@ model InvoiceItem {
   
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
-
-// ==========================================
-// SUPPORT & MAINTENANCE MODULE
-// ==========================================
-
-model Support {
-  id            String   @id @default(uuid())
-  
-  // 1. Initiated
-  clientName    String
-  address       String?  
-  issue         String?  
-  date          DateTime 
-  status        String   @default("PENDING")
-  
-  // 2. Resolved
-  vehicleName   String?  
-  installerName String?  
-  
-  // 3. Hardware Tracking
-  oldImei       String?  // 🔴 The broken one removed
-  oldTrackerSim String?  // 🔴 The broken SIM removed
-  imei          String?  // 🟢 The new one installed
-  trackerSim    String?  // 🟢 The new SIM installed
-  
-  process       String?  @db.Text 
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
