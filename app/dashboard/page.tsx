@@ -34,6 +34,8 @@ export default async function DashboardOverview({
   // 2. Filter Logic (Defaults to Current Month)
   const filterMonth = params?.month ? parseInt(params.month as string) : now.getMonth() + 1;
   const filterYear = params?.year ? parseInt(params.year as string) : now.getFullYear();
+  const filterLeadSource = params?.leadSource as string | undefined;
+
   const filterStartDate = new Date(filterYear, filterMonth - 1, 1);
   const filterEndDate = new Date(filterYear, filterMonth, 0, 23, 59, 59, 999);
   
@@ -42,21 +44,27 @@ export default async function DashboardOverview({
 
   const completedStatuses: any[] = ['PENDING_QC', 'CONFIGURED', 'ACTIVE'];
 
-  // 🟢 FIXED: The "IN_STOCK" error is removed, and the queries are cleanly split
+  // 🟢 INTEGRATION 1: Added Support Model count and distinct Lead Sources query
   const [
     installsThisMonth, installsThisWeek, installsLastWeek,
     totalLeads, convertedLeads, pendingSupport,
-    completedSupport, pendingPayments
+    completedSupport, pendingPayments, distinctClients
   ] = await Promise.all([
     prisma.job.count({ where: { installDate: { gte: startOfThisMonth }, status: { in: completedStatuses } } }),
     prisma.job.count({ where: { installDate: { gte: startOfThisWeek }, status: { in: completedStatuses } } }),
     prisma.job.count({ where: { installDate: { gte: startOfLastWeek, lte: endOfLastWeek }, status: { in: completedStatuses } } }),
     prisma.job.count({ where: { jobType: 'NEW_INSTALL' } }),
     prisma.job.count({ where: { jobType: 'NEW_INSTALL', onboarded: true } }), 
-    prisma.job.count({ where: { jobType: { not: 'NEW_INSTALL' }, status: { in: ['NEW_LEAD', 'SCHEDULED', 'IN_PROGRESS', 'PENDING_QC'] } } }),
+    prisma.support.count({ where: { status: 'PENDING' } }), // 👈 FIXED: Points strictly to the new Support model
     prisma.job.count({ where: { jobType: { not: 'NEW_INSTALL' }, status: { in: ['CONFIGURED', 'ACTIVE'] } } }),
     prisma.job.count({ where: { status: 'ACTIVE', paymentStatus: { not: 'PAID' } } }),
+    prisma.client.findMany({ select: { leadSource: true }, distinct: ["leadSource"] }) // 👈 Gets sources for the dropdown
   ]);
+
+  // Map and clean up lead sources for the filter dropdown
+  const leadSources = distinctClients
+    .map((c) => c.leadSource)
+    .filter((source): source is string => Boolean(source));
 
   // Inventory and Queues batch
   const [unusedSims, unusedDevices, inOnboarding, inTech] = await Promise.all([
@@ -66,12 +74,20 @@ export default async function DashboardOverview({
     prisma.job.count({ where: { status: 'PENDING_QC' } }),
   ]);
 
-  // 🟢 Separate fetch for the table to preserve deep relationship types
+  // 🟢 INTEGRATION 2: Apply the Lead Source filter to the query
+  const installWhere: any = {
+    installDate: { gte: filterStartDate, lte: filterEndDate },
+    status: { in: completedStatuses }
+  };
+
+  if (filterLeadSource && filterLeadSource !== "ALL") {
+    installWhere.vehicle = {
+      client: { leadSource: filterLeadSource }
+    };
+  }
+
   const filteredInstallsList = await prisma.job.findMany({
-    where: { 
-      installDate: { gte: filterStartDate, lte: filterEndDate },
-      status: { in: completedStatuses } 
-    },
+    where: installWhere,
     include: {
       vehicle: { include: { client: true } },
       device: true
@@ -212,7 +228,7 @@ export default async function DashboardOverview({
       {/* ============================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
-        {/* SUPPORT PENDING */}
+        {/* SUPPORT PENDING (Fixed to show actual new support count) */}
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition hover:shadow-md">
           <div className="bg-orange-50 p-4 rounded-2xl text-orange-500"><Wrench size={20} /></div>
           <div>
@@ -261,7 +277,32 @@ export default async function DashboardOverview({
                </h3>
                <p className="text-xs text-gray-500 mt-1 font-medium">Total confirmed installs for this period: <span className="font-bold text-gray-800 bg-gray-200 px-2 py-0.5 rounded-full ml-1">{filteredInstallsList.length}</span></p>
             </div>
-            <OverviewFilter />
+            
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+               {/* 🟢 INTEGRATION 3: New Lead Source Filter placed right next to your existing OverviewFilter */}
+               <form method="GET" className="flex items-center gap-2">
+                 {/* Preserve month and year if they exist in the URL */}
+                 {params?.month && <input type="hidden" name="month" value={params.month as string} />}
+                 {params?.year && <input type="hidden" name="year" value={params.year as string} />}
+                 
+                 <select 
+                   name="leadSource" 
+                   defaultValue={filterLeadSource || "ALL"}
+                   className="bg-white border border-gray-200 text-gray-700 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:border-blue-500 shadow-sm cursor-pointer"
+                 >
+                   <option value="ALL">All Lead Sources</option>
+                   {leadSources.map(source => (
+                     <option key={source} value={source}>{source}</option>
+                   ))}
+                 </select>
+                 <button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm">
+                   Apply
+                 </button>
+               </form>
+
+               {/* Your existing date filter remains untouched */}
+               <OverviewFilter />
+            </div>
          </div>
          
          <div className="overflow-x-auto max-h-[500px] overflow-y-auto custom-scrollbar">
@@ -287,9 +328,15 @@ export default async function DashboardOverview({
                      <div className="text-[11px] text-gray-400 font-mono mt-1 font-medium flex items-center gap-1"><Hash size={10}/> {job.vehicle.plateNumber || "NO PLATE"}</div>
                    </td>
                    <td className="px-6 py-4">
-                     <Link href={`/dashboard/clients/${job.vehicle.clientId}`} className="font-bold text-xs text-blue-600 hover:text-blue-800 transition flex items-center gap-1.5 bg-blue-50 w-fit px-3 py-1.5 rounded-lg border border-blue-100">
+                     <Link href={`/dashboard/clients/${job.vehicle.clientId}`} className="font-bold text-xs text-blue-600 hover:text-blue-800 transition flex items-center gap-1.5 bg-blue-50 w-fit px-3 py-1.5 rounded-lg border border-blue-100 mb-1">
                        <User size={12}/> {job.vehicle.client.fullName}
                      </Link>
+                     {/* 🟢 INTEGRATION 4: Added Lead Source below the client name so you can see your filter working */}
+                     {job.vehicle.client.leadSource && (
+                       <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider ml-1">
+                         Src: {job.vehicle.client.leadSource}
+                       </div>
+                     )}
                    </td>
                    <td className="px-6 py-4 text-right">
                      <div className="text-xs font-mono font-bold text-gray-700 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100 inline-block">
