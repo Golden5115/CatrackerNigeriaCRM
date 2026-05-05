@@ -208,3 +208,30 @@ model InvoiceItem {
   
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
+
+model Support {
+  id            String   @id @default(uuid())
+  
+  // 1. Initiated
+  clientName    String
+  phoneNumber   String   @default("000-000-0000") // 👈 Safely fills the 2 empty tickets   
+  address       String  
+  issue         String  
+  date          DateTime @default(now())
+  status        String   @default("PENDING")
+  paymentStatus String   @default("FREE") // 👈 NEW: Tracks if the support is free or paid
+  
+  // 2. Resolved
+  vehicleName   String?  
+  
+  // 3. Hardware Swaps
+  oldImei       String?  
+  oldTrackerSim String?  
+  imei          String?  
+  trackerSim    String?  
+  
+  process       String?  @db.Text 
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
