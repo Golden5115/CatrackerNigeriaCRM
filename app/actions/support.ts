@@ -101,5 +101,5 @@ export async function deleteSupportTicket(formData: FormData) {
 }
 
 // Legacy imports to protect other files from build errors
-export async function resolveMaintenanceJob(formData: FormData) { return { success: true } }
+export async function resolveMaintenanceJob(jobId: string) { return { success: true } }
 export async function processHardwareSwap(formData: FormData) { return { success: true } }
