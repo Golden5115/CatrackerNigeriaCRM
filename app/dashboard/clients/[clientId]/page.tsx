@@ -1,27 +1,24 @@
 import { prisma } from "@/lib/prisma"
+import { verifySession } from "@/lib/session"
 import Link from "next/link";
 import { 
   ArrowLeft, Car, Smartphone, User, Calendar, CreditCard, 
-  MapPin, Hash, CheckCircle 
+  MapPin, CheckCircle, Edit
 } from "lucide-react";
+import EditHardwareModal from "@/components/EditHardwareModal";
 
 export default async function ClientDetailsPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
+  
+  const session = await verifySession();
+  
+  // 🟢 FIXED: Strictly casts to a boolean to prevent the TS '{}' error
+  const canEdit: boolean = Boolean(session?.canEdit === true || session?.role === 'ADMIN' || session?.role === 'OPERATIONS');
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
     include: {
-      vehicles: {
-        include: {
-          jobs: {
-            include: { 
-              device: true,
-              simCard: true,  
-              installer: true 
-            } 
-          }
-        }
-      },
+      vehicles: { include: { jobs: { include: { device: true, simCard: true, installer: true } } } },
       createdBy: true 
     }
   });
@@ -50,9 +47,16 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
               </div>
             </div>
           </div>
-          <div className="text-right">
-             <div className="text-sm text-gray-500">Customer ID</div>
-             <div className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{client.id.split('-')[0]}</div>
+          <div className="text-right flex flex-col items-end gap-3">
+             {canEdit && (
+               <Link href={`/dashboard/clients/${client.id}/edit`} className="bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition shadow-sm flex items-center gap-2">
+                 <Edit size={16}/> Edit Profile
+               </Link>
+             )}
+             <div>
+               <div className="text-sm text-gray-500 mb-1">Customer ID</div>
+               <div className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{client.id.split('-')[0]}</div>
+             </div>
           </div>
         </div>
       </div>
@@ -63,11 +67,7 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <Car className="text-[#2d4a2a]" /> Vehicle Fleet & Configuration
           </h2>
-          
-          <Link 
-            href={`/dashboard/clients/${client.id}/add-vehicle`}
-            className="bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition shadow-sm flex items-center gap-2"
-          >
+          <Link href={`/dashboard/clients/${client.id}/add-vehicle`} className="bg-gray-50 border text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-100 transition shadow-sm flex items-center gap-2">
             <Car size={16} /> Add New Vehicle
           </Link>
         </div>
@@ -82,8 +82,6 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
 
               return (
                 <div key={vehicle.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
-                  
-                  {/* CARD HEADER: Vehicle Info */}
                   <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                     <div>
                       <h3 className="font-bold text-lg text-gray-800">{vehicle.name}</h3>
@@ -96,21 +94,26 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                     </div>
                   </div>
 
-                  {/* CARD BODY */}
                   <div className="p-6 space-y-6">
-                    
-                    {/* A. Technical Details */}
                     <div className="space-y-3">
                       <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Technical Configuration</h4>
                       
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                          <span className="text-blue-600 text-xs block mb-1">IMEI Number</span>
-                          <div className="font-mono font-bold text-gray-800 break-all">{device?.imei || "---"}</div>
+                          <span className="text-blue-600 text-xs block mb-1 font-bold">IMEI Number</span>
+                          {device ? (
+                            <EditHardwareModal type="DEVICE" id={device.id} currentValue={device.imei} canEdit={canEdit} />
+                          ) : (
+                            <div className="font-mono font-bold text-gray-800 break-all">---</div>
+                          )}
                         </div>
                         <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
-                          <span className="text-purple-600 text-xs block mb-1">Sim Number</span>
-                          <div className="font-mono font-bold text-gray-800">{simCard?.simNumber || "---"}</div>
+                          <span className="text-purple-600 text-xs block mb-1 font-bold">Sim Number</span>
+                          {simCard ? (
+                            <EditHardwareModal type="SIM" id={simCard.id} currentValue={simCard.simNumber} canEdit={canEdit} />
+                          ) : (
+                            <div className="font-mono font-bold text-gray-800 break-all">---</div>
+                          )}
                         </div>
                       </div>
 
@@ -119,7 +122,6 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                         <span className="font-medium text-gray-900">{configDate}</span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
-                        {/* 👇 FIX: Show the manually typed name, fallback to account name, fallback to System Admin */}
                         <span className="text-gray-500 flex items-center gap-2"><User size={14}/> Installed By:</span>
                         <span className="font-medium text-gray-900">
                           {job?.installerName || job?.installer?.fullName || "System Admin"}
@@ -129,10 +131,8 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
 
                     <hr className="border-gray-100" />
 
-                    {/* B. Financial Details */}
                     <div className="space-y-3">
                       <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Payment Information</h4>
-                      
                       <div className="flex justify-between items-center bg-green-50 p-4 rounded-lg border border-green-100">
                         <div className="flex items-center gap-3">
                            <div className="bg-[#e0f2de] p-2 rounded-full text-[#2d4a2a]">
@@ -148,7 +148,6 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                         </div>
                       </div>
                     </div>
-
                   </div>
                 </div>
               )

@@ -1,14 +1,10 @@
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
-import { Search as SearchIcon, User, Car, Cpu, Smartphone, ArrowRight } from "lucide-react"
+import { Search as SearchIcon, User, Car, Cpu, Smartphone, ArrowRight, Wrench, FileText } from "lucide-react"
 
 export const dynamic = 'force-dynamic'
 
-export default async function SearchPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
+export default async function SearchPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const params = await searchParams;
   const q = typeof params.q === 'string' ? params.q : '';
 
@@ -22,45 +18,59 @@ export default async function SearchPage({
     );
   }
 
-  // 👇 FIX: We now search 4 separate tables instead of 3
-  const [clients, vehicles, devices, simCards] = await Promise.all([
-    // 1. Search Clients
+  // 🟢 NEW: Broadened search fields to capture address, year, invoices, and support
+  const [clients, vehicles, devices, simCards, supportTickets, invoices] = await Promise.all([
     prisma.client.findMany({
       where: {
         OR: [
           { fullName: { contains: q, mode: 'insensitive' } },
           { phoneNumber: { contains: q } },
-          { email: { contains: q, mode: 'insensitive' } }
+          { email: { contains: q, mode: 'insensitive' } },
+          { address: { contains: q, mode: 'insensitive' } },
+          { state: { contains: q, mode: 'insensitive' } }
         ]
       },
       include: { vehicles: true }
     }),
-    
-    // 2. Search Vehicles
     prisma.vehicle.findMany({
       where: {
         OR: [
           { plateNumber: { contains: q, mode: 'insensitive' } },
-          { name: { contains: q, mode: 'insensitive' } }
+          { name: { contains: q, mode: 'insensitive' } },
+          { year: { contains: q } }
         ]
       },
       include: { client: true }
     }),
-    
-    // 3. Search Devices (IMEI ONLY)
     prisma.device.findMany({
       where: { imei: { contains: q } },
       include: { job: { include: { vehicle: { include: { client: true } } } } }
     }),
-
-    // 4. Search SIM Cards (SIM ONLY)
     prisma.simCard.findMany({
       where: { simNumber: { contains: q } },
       include: { job: { include: { vehicle: { include: { client: true } } } } }
+    }),
+    prisma.support.findMany({
+      where: {
+        OR: [
+          { clientName: { contains: q, mode: 'insensitive' } },
+          { phoneNumber: { contains: q } },
+          { imei: { contains: q } },
+          { oldImei: { contains: q } }
+        ]
+      }
+    }),
+    prisma.invoice.findMany({
+      where: {
+        OR: [
+          { invoiceNumber: { contains: q, mode: 'insensitive' } },
+          { clientName: { contains: q, mode: 'insensitive' } }
+        ]
+      }
     })
   ]);
 
-  const totalResults = clients.length + vehicles.length + devices.length + simCards.length;
+  const totalResults = clients.length + vehicles.length + devices.length + simCards.length + supportTickets.length + invoices.length;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -128,6 +138,50 @@ export default async function SearchPage({
         </div>
       )}
 
+      {/* --- SUPPORT TICKETS --- */}
+      {supportTickets.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b pb-2">
+             <Wrench size={18} className="text-orange-500" /> Matching Support Tickets
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {supportTickets.map(ticket => (
+              <Link href={`/dashboard/support`} key={ticket.id} className="block bg-white p-4 rounded-xl border hover:border-orange-400 hover:shadow-md transition group">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-gray-900">{ticket.clientName}</p>
+                    <p className="text-sm text-gray-500 mt-1 truncate">{ticket.issue}</p>
+                  </div>
+                  <ArrowRight size={18} className="text-gray-300 group-hover:text-orange-500 transition" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* --- INVOICES --- */}
+      {invoices.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b pb-2">
+             <FileText size={18} className="text-yellow-500" /> Matching Invoices
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {invoices.map(invoice => (
+              <Link href={`/dashboard/invoices/${invoice.id}`} key={invoice.id} className="block bg-white p-4 rounded-xl border hover:border-yellow-400 hover:shadow-md transition group">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-gray-900">{invoice.invoiceNumber}</p>
+                    <p className="text-sm text-gray-500 mt-1">Billed to: {invoice.clientName}</p>
+                  </div>
+                  <ArrowRight size={18} className="text-gray-300 group-hover:text-yellow-500 transition" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* --- HARDWARE (DEVICE & SIM) RESULTS --- */}
       {(devices.length > 0 || simCards.length > 0) && (
         <div className="space-y-4">
@@ -135,8 +189,6 @@ export default async function SearchPage({
              <Cpu size={18} className="text-purple-500" /> Matching Hardware
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            {/* Render Devices */}
             {devices.map(device => (
               <div key={device.id} className="bg-white p-4 rounded-xl border">
                 <div className="flex items-start gap-3">
@@ -144,7 +196,6 @@ export default async function SearchPage({
                   <div className="w-full">
                     <p className="font-mono font-bold text-gray-900 break-all">{device.imei}</p>
                     <p className="text-xs text-gray-500 font-bold uppercase mt-1">Status: {device.status}</p>
-                    
                     {device.job?.vehicle && (
                       <div className="mt-3 pt-3 border-t text-sm">
                         <p className="text-gray-500">Installed in:</p>
@@ -158,8 +209,6 @@ export default async function SearchPage({
                 </div>
               </div>
             ))}
-
-            {/* Render SIM Cards */}
             {simCards.map(sim => (
               <div key={sim.id} className="bg-white p-4 rounded-xl border">
                 <div className="flex items-start gap-3">
@@ -169,7 +218,6 @@ export default async function SearchPage({
                     <p className="text-xs text-gray-500 font-bold uppercase mt-1">
                       Network: {sim.network || 'Unknown'} | Status: {sim.status}
                     </p>
-                    
                     {sim.job?.vehicle && (
                       <div className="mt-3 pt-3 border-t text-sm">
                         <p className="text-gray-500">Installed in:</p>
@@ -183,7 +231,6 @@ export default async function SearchPage({
                 </div>
               </div>
             ))}
-
           </div>
         </div>
       )}

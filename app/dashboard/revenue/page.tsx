@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma"
 import { verifySession } from "@/lib/session"
 import { DollarSign, TrendingUp, TrendingDown, Calendar, CreditCard, Activity } from "lucide-react"
 import RevenueChart from "@/components/RevenueChart"
-import { fixHistoricalPaymentDates } from "@/app/actions/fixData"
 
 export const dynamic = 'force-dynamic';
 
@@ -24,16 +23,16 @@ export default async function RevenuePage() {
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   sixMonthsAgo.setHours(0, 0, 0, 0);
 
-  // 🟢 FIXED: Fetch paymentDate, and restrict outstanding count to ONBOARDED jobs only!
+  // 🟢 FIXED: We now fetch `installDate` alongside the payment data
   const [paidJobs, unpaidJobsCount] = await Promise.all([
     prisma.job.findMany({ 
       where: { amountPaid: { gt: 0 } }, 
-      select: { amountPaid: true, updatedAt: true, paymentDate: true } 
+      select: { amountPaid: true, updatedAt: true, paymentDate: true, installDate: true } 
     }),
     prisma.job.count({ 
       where: { 
         paymentStatus: { not: 'PAID' },
-        onboarded: true // 👈 NEW: Only counts if the client is actually fully active/onboarded
+        onboarded: true
       }
     })
   ]);
@@ -43,7 +42,6 @@ export default async function RevenuePage() {
   let lastMonthRev = 0;
   let totalAllTime = 0;
 
-  // 🟢 FIXED: The "Swiss Army Knife" data bucket that guarantees the chart renders
   const chartData = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
     return { 
@@ -51,16 +49,21 @@ export default async function RevenuePage() {
       year: d.getFullYear(), 
       name: d.toLocaleString('default', { month: 'short' }), 
       total: 0,
-      revenue: 0, // 👈 Fallback 1
-      amount: 0,  // 👈 Fallback 2
-      value: 0    // 👈 Fallback 3
+      revenue: 0, 
+      amount: 0,  
+      value: 0    
     };
   });
 
-// Sort Job Payments into their correct time buckets
+  // Sort Job Payments into their correct time buckets
   paidJobs.forEach(job => {
     const amt = Number(job.amountPaid || 0);
-    const date = job.paymentDate ? new Date(job.paymentDate) : new Date(job.updatedAt); 
+    
+    // 🟢 FIXED: Revenue is now recognized by the Installation Date to match operational metrics.
+    // Falls back safely if an install date doesn't exist for a legacy record.
+    const date = job.installDate 
+      ? new Date(job.installDate) 
+      : (job.paymentDate ? new Date(job.paymentDate) : new Date(job.updatedAt)); 
     
     totalAllTime += amt;
 
@@ -72,7 +75,7 @@ export default async function RevenuePage() {
       const bucket = chartData.find(b => b.month === date.getMonth() && b.year === date.getFullYear());
       if (bucket) {
         bucket.total += amt;
-        bucket.revenue += amt; // 👈 Syncs all fallbacks
+        bucket.revenue += amt; 
         bucket.amount += amt;  
         bucket.value += amt;   
       }
@@ -97,7 +100,7 @@ export default async function RevenuePage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight">Financial Analysis</h2>
-          <p className="text-sm text-gray-500 font-medium mt-1">Real-time revenue tracking synced from confirmed job payments.</p>
+          <p className="text-sm text-gray-500 font-medium mt-1">Real-time revenue tracking based on the date of installation.</p>
         </div>
       </div>
 

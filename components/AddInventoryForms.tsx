@@ -1,31 +1,40 @@
 'use client'
 
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { addDevice, addSimCard } from "@/app/actions/inventory"
 import SubmitButton from "./SubmitButton"
-import { Cpu, Smartphone } from "lucide-react"
+import { Cpu, Smartphone, AlertCircle, CheckCircle2 } from "lucide-react"
 
 export default function AddInventoryForms() {
   const deviceFormRef = useRef<HTMLFormElement>(null)
   const simFormRef = useRef<HTMLFormElement>(null)
 
-  // Handle adding IMEI
+  const [deviceError, setDeviceError] = useState("")
+  const [deviceSuccess, setDeviceSuccess] = useState("")
+  const [simError, setSimError] = useState("")
+  const [simSuccess, setSimSuccess] = useState("")
+
   const handleAddDevice = async (formData: FormData) => {
+    setDeviceError(""); setDeviceSuccess("");
     const res = await addDevice(formData)
     if (res?.error) {
-      alert("Error: " + res.error)
+      setDeviceError(res.error)
     } else {
-      deviceFormRef.current?.reset() // Clear the input on success
+      setDeviceSuccess("Hardware added successfully!")
+      deviceFormRef.current?.reset()
+      setTimeout(() => setDeviceSuccess(""), 3000)
     }
   }
 
-  // Handle adding SIM
   const handleAddSim = async (formData: FormData) => {
+    setSimError(""); setSimSuccess("");
     const res = await addSimCard(formData)
     if (res?.error) {
-      alert("Error: " + res.error)
+      setSimError(res.error)
     } else {
-      simFormRef.current?.reset() // Clear the input on success
+      setSimSuccess("SIM card added successfully!")
+      simFormRef.current?.reset()
+      setTimeout(() => setSimSuccess(""), 3000)
     }
   }
 
@@ -33,7 +42,7 @@ export default function AddInventoryForms() {
    <div className="flex flex-col lg:flex-row gap-4 w-full lg:w-auto items-stretch lg:items-center">
       
       {/* ADD TRACKER FORM */}
-      <div className="bg-white p-6 rounded-xl border shadow-sm">
+      <div className="bg-white p-6 rounded-xl border shadow-sm flex-1">
         <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
           <Cpu className="text-blue-600" size={18} /> Add Tracker Hardware
         </h3>
@@ -49,10 +58,12 @@ export default function AddInventoryForms() {
             Add Stock
           </SubmitButton>
         </form>
+        {deviceError && <p className="text-xs font-bold text-red-600 mt-2 flex items-center gap-1 bg-red-50 p-2 rounded"><AlertCircle size={14}/> {deviceError}</p>}
+        {deviceSuccess && <p className="text-xs font-bold text-green-600 mt-2 flex items-center gap-1 bg-green-50 p-2 rounded"><CheckCircle2 size={14}/> {deviceSuccess}</p>}
       </div>
 
       {/* ADD SIM CARD FORM */}
-      <div className="bg-white p-6 rounded-xl border shadow-sm">
+      <div className="bg-white p-6 rounded-xl border shadow-sm flex-1">
         <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
           <Smartphone className="text-purple-600" size={18} /> Add SIM Card
         </h3>
@@ -74,6 +85,8 @@ export default function AddInventoryForms() {
             Add Stock
           </SubmitButton>
         </form>
+        {simError && <p className="text-xs font-bold text-red-600 mt-2 flex items-center gap-1 bg-red-50 p-2 rounded"><AlertCircle size={14}/> {simError}</p>}
+        {simSuccess && <p className="text-xs font-bold text-green-600 mt-2 flex items-center gap-1 bg-green-50 p-2 rounded"><CheckCircle2 size={14}/> {simSuccess}</p>}
       </div>
 
     </div>

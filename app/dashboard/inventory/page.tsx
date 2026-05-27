@@ -4,6 +4,7 @@ import LocalSearchInput from "@/components/LocalSearchInput"
 import InventoryFilter from "@/components/InventoryFilter"
 import AddInventoryForms from "@/components/AddInventoryForms"
 import { Cpu, CreditCard, CheckCircle, Wrench, AlertTriangle } from "lucide-react"
+import EditHardwareModal from "@/components/EditHardwareModal"
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +15,10 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
 
   const session = await verifySession()
   const isAdminOrOps = session?.role === 'ADMIN' || session?.role === 'OPERATIONS'
+  
+  // 🟢 FIXED: Strictly casts to a boolean to prevent the TS '{}' error
+  const canEdit: boolean = Boolean(session?.canEdit === true || isAdminOrOps)
 
-  // Build the dynamic filter logic
   const deviceWhere: any = {};
   const simWhere: any = {};
 
@@ -29,7 +32,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     simWhere.status = statusFilter;
   }
 
-  // Fetch from database
   const [devices, sims] = await Promise.all([
     prisma.device.findMany({ where: deviceWhere, include: { job: { include: { vehicle: { include: { client: true } } } } }, orderBy: { createdAt: 'desc' } }),
     prisma.simCard.findMany({ where: simWhere, include: { job: { include: { vehicle: { include: { client: true } } } } }, orderBy: { createdAt: 'desc' } })
@@ -54,7 +56,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         {isAdminOrOps && <AddInventoryForms />}
       </div>
 
-      {/* 🟢 NEW: Unified Search & Filter Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
         <div className="flex-1">
           <LocalSearchInput placeholder="Search IMEI or SIM Number..." />
@@ -64,7 +65,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         
-        {/* DEVICES (TRACKERS) TABLE */}
+        {/* DEVICES TABLE */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-[600px]">
           <div className="bg-gray-50 p-4 border-b flex items-center gap-2">
              <Cpu className="text-gray-500" size={18} />
@@ -76,7 +77,9 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                {devices.map(device => (
                  <div key={device.id} className="p-3 border rounded-lg hover:border-blue-300 transition bg-gray-50">
                     <div className="flex justify-between items-start mb-2">
-                       <div className="font-mono font-bold text-sm text-gray-900">{device.imei}</div>
+                       <div className="text-sm">
+                         <EditHardwareModal type="DEVICE" id={device.id} currentValue={device.imei} canEdit={canEdit} />
+                       </div>
                        {getStatusBadge(device.status)}
                     </div>
                     {device.status === 'INSTALLED' && device.job && (
@@ -104,8 +107,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                {sims.map(sim => (
                  <div key={sim.id} className="p-3 border rounded-lg hover:border-purple-300 transition bg-gray-50">
                     <div className="flex justify-between items-start mb-2">
-                       <div>
-                         <div className="font-mono font-bold text-sm text-gray-900">{sim.simNumber}</div>
+                       <div className="text-sm">
+                         <EditHardwareModal type="SIM" id={sim.id} currentValue={sim.simNumber} canEdit={canEdit} />
                          <div className="text-[10px] font-bold text-purple-600 uppercase mt-0.5">{sim.network || "UNKNOWN NETWORK"}</div>
                        </div>
                        {getStatusBadge(sim.status)}
