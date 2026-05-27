@@ -7,7 +7,8 @@ import {
   Smartphone, CreditCard, Shield, Briefcase, LogOut, Package, User, Lock, 
   TrendingUp, Menu, X, Wrench,
   FileText,
-  Car
+  Car,
+  PieChart // 🟢 NEW: Imported a cool icon for the Accounts module
 } from "lucide-react";
 import Logo from "./Logo";
 import SearchInput from "./SearchInput";
@@ -17,7 +18,6 @@ import LoadingLink from "@/components/LoadingLink";
 const allMenuItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard, requiredModule: null }, 
   { name: "My Profile", href: "/dashboard/profile", icon: User, requiredModule: null },
-  // 🟢 FIXED: The requiredModule now strictly matches the exact names from the checkboxes
   { name: "Sales Pipeline", href: "/dashboard/leads", icon: Users, requiredModule: "Sales Pipeline" },
   { name: "Support Tickets", href: "/dashboard/support", icon: Wrench, requiredModule: "Support Tickets" },
   { name: "Inventory", href: "/dashboard/inventory", icon: Package, requiredModule: "Inventory" },
@@ -28,8 +28,11 @@ const allMenuItems = [
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, requiredModule: "Payments" },
   { name: "Invoices", href: "/dashboard/invoices", icon: FileText, requiredModule: "Invoices" },
   { name: "Revenue Analysis", href: "/dashboard/revenue", icon: TrendingUp, adminOnly: true },
+  // 🟢 FIXED: Added the Accounts Module strictly for Admins
+  { name: "Accounts & Finance", href: "/dashboard/accounts", icon: PieChart, adminOnly: true },
   { name: "Team & Roles", href: "/dashboard/users", icon: Shield, adminOnly: true }, 
 ];
+
 export default function Sidebar({ 
   userRole = 'STAFF', 
   accessibleModules = [] 
@@ -46,7 +49,6 @@ export default function Sidebar({
   return (
     <>
       {/* --- MOBILE TOP BAR --- */}
-      {/* 👇 Added print:hidden here */}
       <div className="md:hidden flex items-center justify-between bg-[#2d4a2a] p-4 text-white shrink-0 shadow-md z-40 relative print:hidden">
         <Logo textClassName="text-white" showText={true} />
         <button onClick={() => setIsMobileOpen(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition">
@@ -63,7 +65,6 @@ export default function Sidebar({
       )}
 
       {/* --- SIDEBAR (Desktop & Mobile Drawer) --- */}
-      {/* 👇 Added print:hidden here as well */}
       <div className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between border-r bg-[#2d4a2a] text-white transition-all duration-300 ease-in-out shadow-2xl shrink-0 print:hidden
         ${isCollapsed ? 'md:w-20' : 'md:w-64'} 
         ${isMobileOpen ? 'w-72 translate-x-0' : '-translate-x-full md:translate-x-0 md:relative'}
