@@ -3,16 +3,14 @@ import { verifySession } from "@/lib/session"
 import Link from "next/link";
 import { 
   ArrowLeft, Car, Smartphone, User, Calendar, CreditCard, 
-  MapPin, CheckCircle, Edit
+  MapPin, Edit, AlertCircle
 } from "lucide-react";
-import EditHardwareModal from "@/components/EditHardwareModal";
+import AssignJobHardwareModal from "@/components/AssignJobHardwareModal"; // 🟢 FIXED: Using the Smart Link Modal
 
 export default async function ClientDetailsPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
   
   const session = await verifySession();
-  
-  // 🟢 FIXED: Strictly casts to a boolean to prevent the TS '{}' error
   const canEdit: boolean = Boolean(session?.canEdit === true || session?.role === 'ADMIN' || session?.role === 'OPERATIONS');
 
   const client = await prisma.client.findUnique({
@@ -75,10 +73,6 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            {client.vehicles.map((vehicle) => {
               const job = vehicle.jobs[0];
-              const device = job?.device;
-              const simCard = job?.simCard; 
-              const configDate = job?.configurationDate ? new Date(job.configurationDate).toLocaleDateString() : "Pending";
-              const paidAmount = job?.amountPaid ? Number(job.amountPaid) : 0;
 
               return (
                 <div key={vehicle.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
@@ -95,59 +89,74 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                   </div>
 
                   <div className="p-6 space-y-6">
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Technical Configuration</h4>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                          <span className="text-blue-600 text-xs block mb-1 font-bold">IMEI Number</span>
-                          {device ? (
-                            <EditHardwareModal type="DEVICE" id={device.id} currentValue={device.imei} canEdit={canEdit} />
-                          ) : (
-                            <div className="font-mono font-bold text-gray-800 break-all">---</div>
-                          )}
-                        </div>
-                        <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
-                          <span className="text-purple-600 text-xs block mb-1 font-bold">Sim Number</span>
-                          {simCard ? (
-                            <EditHardwareModal type="SIM" id={simCard.id} currentValue={simCard.simNumber} canEdit={canEdit} />
-                          ) : (
-                            <div className="font-mono font-bold text-gray-800 break-all">---</div>
-                          )}
-                        </div>
-                      </div>
+                    {job ? (
+                      <>
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Technical Configuration</h4>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                              <span className="text-blue-600 text-xs block mb-1 font-bold">IMEI Number</span>
+                              {/* 🟢 FIXED: Safely links to existing warehouse stock using the Smart Modal */}
+                              <AssignJobHardwareModal 
+                                jobId={job.id} 
+                                type="DEVICE" 
+                                currentValue={job.device?.imei} 
+                                canEdit={canEdit} 
+                              />
+                            </div>
+                            <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                              <span className="text-purple-600 text-xs block mb-1 font-bold">Sim Number</span>
+                              {/* 🟢 FIXED: Safely links to existing warehouse stock using the Smart Modal */}
+                              <AssignJobHardwareModal 
+                                jobId={job.id} 
+                                type="SIM" 
+                                currentValue={job.simCard?.simNumber} 
+                                canEdit={canEdit} 
+                              />
+                            </div>
+                          </div>
 
-                      <div className="flex justify-between items-center text-sm pt-2">
-                        <span className="text-gray-500 flex items-center gap-2"><Calendar size={14}/> Config Date:</span>
-                        <span className="font-medium text-gray-900">{configDate}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500 flex items-center gap-2"><User size={14}/> Installed By:</span>
-                        <span className="font-medium text-gray-900">
-                          {job?.installerName || job?.installer?.fullName || "System Admin"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <hr className="border-gray-100" />
-
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Payment Information</h4>
-                      <div className="flex justify-between items-center bg-green-50 p-4 rounded-lg border border-green-100">
-                        <div className="flex items-center gap-3">
-                           <div className="bg-[#e0f2de] p-2 rounded-full text-[#2d4a2a]">
-                             <CreditCard size={18} />
-                           </div>
-                           <div>
-                             <p className="text-xs text-green-800 font-bold uppercase">Amount Paid</p>
-                             <p className="text-xs text-green-600">Collector: {job?.paymentCollector || "System"}</p>
-                           </div>
+                          <div className="flex justify-between items-center text-sm pt-2">
+                            <span className="text-gray-500 flex items-center gap-2"><Calendar size={14}/> Config Date:</span>
+                            <span className="font-medium text-gray-900">
+                              {job.configurationDate ? new Date(job.configurationDate).toLocaleDateString() : "Pending"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 flex items-center gap-2"><User size={14}/> Installed By:</span>
+                            <span className="font-medium text-gray-900">
+                              {job.installerName || job.installer?.fullName || "System Admin"}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-xl font-bold text-[#2d4a2a]">
-                          ₦{paidAmount.toLocaleString()}
+
+                        <hr className="border-gray-100" />
+
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Payment Information</h4>
+                          <div className="flex justify-between items-center bg-green-50 p-4 rounded-lg border border-green-100">
+                            <div className="flex items-center gap-3">
+                               <div className="bg-[#e0f2de] p-2 rounded-full text-[#2d4a2a]">
+                                 <CreditCard size={18} />
+                               </div>
+                               <div>
+                                 <p className="text-xs text-green-800 font-bold uppercase">Amount Paid</p>
+                                 <p className="text-xs text-green-600">Collector: {job.paymentCollector || "System"}</p>
+                               </div>
+                            </div>
+                            <div className="text-xl font-bold text-[#2d4a2a]">
+                              ₦{job.amountPaid ? Number(job.amountPaid).toLocaleString() : "0"}
+                            </div>
+                          </div>
                         </div>
+                      </>
+                    ) : (
+                      <div className="py-8 text-center text-gray-500 flex flex-col items-center gap-2">
+                        <AlertCircle size={24} className="text-gray-400"/>
+                        <p className="text-sm font-bold">No active job found.</p>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )

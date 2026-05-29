@@ -23,6 +23,7 @@ model User {
   guarantorPhone    String?
   phoneNumber       String?
   qualifications    String?
+ 
   status            AccountStatus @default(ACTIVE)
   updatedAt         DateTime      @default(now()) @updatedAt
   canDelete         Boolean       @default(false)
@@ -65,23 +66,26 @@ model Vehicle {
 }
 
 model Device {
-  id        String      @id @default(cuid())
-  imei      String      @unique
-  createdAt DateTime    @default(now())
-  status    StockStatus @default(IN_STOCK)
-  job       Job?
+  id              String      @id @default(cuid())
+  imei            String      @unique
+  createdAt       DateTime    @default(now())
+  status          StockStatus @default(IN_STOCK)
+  job             Job?
+  assignedToName  String?     // 👈 Only keeping the manual name string
+
   @@index([imei])
   @@index([status])
 }
 
 model SimCard {
-  id        String      @id @default(cuid())
-  simNumber String      @unique
-  network   String?
-  status    StockStatus @default(IN_STOCK)
-  createdAt DateTime    @default(now())
-  job       Job?
-  @@index([simNumber])
+  id              String      @id @default(cuid())
+  simNumber       String      @unique
+  network         String?
+  status          StockStatus @default(IN_STOCK)
+  createdAt       DateTime    @default(now())
+  job             Job?
+  assignedToName  String?     // 👈 Only keeping the manual name string
+
   @@index([status])
 }
 
