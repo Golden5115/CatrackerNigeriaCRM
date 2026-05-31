@@ -3,7 +3,7 @@ import { verifySession } from "@/lib/session"
 import LocalSearchInput from "@/components/LocalSearchInput"
 import InventoryFilter from "@/components/InventoryFilter"
 import AddInventoryForms from "@/components/AddInventoryForms"
-import InventoryTables from "@/components/InventoryTables" 
+import InventoryTables from "@/components/InventoryTables" // 🟢 FIXED: Imported the interactive component
 
 export const dynamic = 'force-dynamic'
 
@@ -46,7 +46,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     })
   ])
 
-  // 🟢 FIXED: Safely serializes the Prisma objects to destroy the `Decimal` error
+  // Safely serializes the Prisma objects to destroy the `Decimal` error
   const safeDevices = JSON.parse(JSON.stringify(devices));
   const safeSims = JSON.parse(JSON.stringify(sims));
 
@@ -67,6 +67,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <InventoryFilter currentFilter={statusFilter} />
       </div>
 
+      {/* 🟢 FIXED: This component contains all your Checkboxes and Assign Logic! */}
       <InventoryTables 
         devices={safeDevices} 
         sims={safeSims} 

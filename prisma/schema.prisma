@@ -242,20 +242,21 @@ model Support {
 }
 
 model Debit {
-  id          String   @id @default(uuid())
-  amount      Decimal  @default(0.00)
-  category    String   
-  reason      String?  
-  date        DateTime @default(now())
-  note        String?  @db.Text
-  receiptUrl  String?  
-  status      String   @default("COMPLETED") 
+  id            String   @id @default(uuid())
+  amount        Decimal  @default(0.00)
+  category      String   
+  reason        String?  
+  recipientName String?  // 🟢 NEW: Tracks who received the money
+  date          DateTime @default(now())
+  note          String?  @db.Text
+  receiptUrl    String?  
+  status        String   @default("COMPLETED") 
   
-  createdById String?
-  createdBy   User?    @relation("CreatedDebits", fields: [createdById], references: [id])
+  createdById   String?
+  createdBy     User?    @relation("CreatedDebits", fields: [createdById], references: [id])
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([category])
   @@index([date])

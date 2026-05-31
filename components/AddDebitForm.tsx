@@ -42,9 +42,17 @@ export default function AddDebitForm() {
             <h3 className="text-xl font-black text-gray-900 mb-6">Record Debit</h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (₦) *</label>
-                <input type="number" step="0.01" name="amount" required className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition text-sm font-black bg-white" placeholder="0.00" />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (₦) *</label>
+                  <input type="number" step="0.01" name="amount" required className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition text-sm font-black bg-white" placeholder="0.00" />
+                </div>
+                <div>
+                  {/* 🟢 NEW: Input for the recipient */}
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Received By *</label>
+                  <input type="text" name="recipientName" required className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition text-sm font-bold bg-white" placeholder="Name of payee..." />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
