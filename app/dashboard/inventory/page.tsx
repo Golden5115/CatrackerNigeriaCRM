@@ -29,8 +29,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     simWhere.status = statusFilter;
   }
 
-  // 🟢 FIXED: Removed `assignedTo: true` because `assignedToName` is a regular text field now. 
-  // Regular text fields are fetched automatically by Prisma!
   const [devices, sims] = await Promise.all([
     prisma.device.findMany({ 
       where: deviceWhere, 
@@ -48,7 +46,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     })
   ])
 
-  // 🟢 FIXED: Safely serializes the Prisma objects to destroy the Next.js `Decimal` error
+  // 🟢 FIXED: Safely serializes the Prisma objects to destroy the `Decimal` error
   const safeDevices = JSON.parse(JSON.stringify(devices));
   const safeSims = JSON.parse(JSON.stringify(sims));
 
