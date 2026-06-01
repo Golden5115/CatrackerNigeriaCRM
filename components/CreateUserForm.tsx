@@ -8,7 +8,7 @@ import { createUser } from "@/app/actions/users"
 const AVAILABLE_MODULES = [
   { id: "Dashboard", label: "Dashboard" },
   { id: "Sales Pipeline", label: "Sales Pipeline" },
-  { id: "Support Tickets", label: "Support Tickets" }, // 👈 ADDED HERE
+  { id: "Support Tickets", label: "Support Tickets" }, 
   { id: "Client Database", label: "Client Database" },
   { id: "Fleet & Vehicles", label: "Fleet & Vehicles" },
   { id: "Payments", label: "Payments" },
@@ -17,6 +17,8 @@ const AVAILABLE_MODULES = [
   { id: "Tech Support", label: "Tech Support" },
   { id: "Activation", label: "Activation" },
   { id: "Revenue Analytics", label: "Revenue Analytics" },
+  // 🟢 NEW: Added Accounts & Finance to the checklist
+  { id: "Accounts & Finance", label: "Accounts & Finance" },
   { id: "Team", label: "Team" }
 ];
 

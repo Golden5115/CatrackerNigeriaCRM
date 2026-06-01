@@ -6,7 +6,7 @@ import { Loader2, UserCog, X, ShieldAlert } from "lucide-react"
 
 const AVAILABLE_MODULES = [
   "Dashboard", "Sales Pipeline", "Support Tickets", "Client Database", "Fleet & Vehicles", "Payments", "Invoices", // 👈 ADDED HERE
-  "Inventory", "Tech Support", "Activation", "Revenue Analytics", "Team"
+  "Inventory", "Tech Support", "Activation", "Revenue Analytics", "Accounts & Finance","Team"
 ];
 
 const ROLES = ["ADMIN", "CSR", "INSTALLER", "TECH_SUPPORT", "CEO", "MANAGER", "HR", "OPERATIONS"];

@@ -28,8 +28,10 @@ const allMenuItems = [
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, requiredModule: "Payments" },
   { name: "Invoices", href: "/dashboard/invoices", icon: FileText, requiredModule: "Invoices" },
   { name: "Revenue Analysis", href: "/dashboard/revenue", icon: TrendingUp, adminOnly: true },
-  // 🟢 FIXED: Added the Accounts Module strictly for Admins
-  { name: "Accounts & Finance", href: "/dashboard/accounts", icon: PieChart, adminOnly: true },
+  
+  // 🟢 FIXED: Changed `adminOnly: true` to `requiredModule: "Accounts & Finance"`
+  { name: "Accounts & Finance", href: "/dashboard/accounts", icon: PieChart, requiredModule: "Accounts & Finance" },
+  
   { name: "Team & Roles", href: "/dashboard/users", icon: Shield, adminOnly: true }, 
 ];
 
