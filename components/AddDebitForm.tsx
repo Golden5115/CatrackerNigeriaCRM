@@ -13,6 +13,33 @@ export default function AddDebitForm() {
   const [success, setSuccess] = useState("")
   const [category, setCategory] = useState("Logistics")
 
+  // 🟢 NEW: State to handle the comma formatting
+  const [rawAmount, setRawAmount] = useState("")
+  const [displayAmount, setDisplayAmount] = useState("")
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 1. Strip out everything except numbers and decimals
+    let val = e.target.value.replace(/[^0-9.]/g, '');
+    
+    // 2. Prevent the user from typing multiple decimal points
+    const parts = val.split('.');
+    if (parts.length > 2) {
+       parts.pop();
+       val = parts.join('.');
+    }
+
+    setRawAmount(val); // Save the clean mathematical number
+
+    // 3. Format the display string with commas
+    if (val) {
+       const formattedParts = val.split('.');
+       formattedParts[0] = Number(formattedParts[0]).toLocaleString('en-US'); // Add commas to thousands
+       setDisplayAmount(formattedParts.join('.'));
+    } else {
+       setDisplayAmount("");
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true); setError(""); setSuccess("");
@@ -24,7 +51,12 @@ export default function AddDebitForm() {
       setError(res.error)
     } else {
       setSuccess("Debit recorded successfully!")
-      setTimeout(() => { setIsOpen(false); setSuccess("") }, 1500)
+      setTimeout(() => { 
+        setIsOpen(false); 
+        setSuccess(""); 
+        setRawAmount(""); 
+        setDisplayAmount(""); 
+      }, 1500)
     }
     setLoading(false)
   }
@@ -46,10 +78,20 @@ export default function AddDebitForm() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (₦) *</label>
-                  <input type="number" step="0.01" name="amount" required className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition text-sm font-black bg-white" placeholder="0.00" />
+                  {/* 🟢 NEW: Hidden input quietly sends the clean number (e.g. 4000) to the backend */}
+                  <input type="hidden" name="amount" value={rawAmount} />
+                  
+                  {/* 🟢 NEW: Visible input formats it beautifully (e.g. 4,000) for the user */}
+                  <input 
+                    type="text" 
+                    value={displayAmount}
+                    onChange={handleAmountChange}
+                    required 
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition text-sm font-black bg-white" 
+                    placeholder="0.00" 
+                  />
                 </div>
                 <div>
-                  {/* 🟢 NEW: Input for the recipient */}
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Received By *</label>
                   <input type="text" name="recipientName" required className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition text-sm font-bold bg-white" placeholder="Name of payee..." />
                 </div>
