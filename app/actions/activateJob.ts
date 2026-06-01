@@ -12,11 +12,12 @@ export async function activateJob(formData: FormData) {
   }
 
   try {
-    // 1. Move the Job strictly to ACTIVE status
+    // 🟢 FIXED: Restored 'onboarded: true' so the job flows instantly into Payments & Accounts
     await prisma.job.update({
       where: { id: jobId },
       data: {
         status: 'ACTIVE',
+        onboarded: true 
       }
     });
   } catch (error) {
@@ -24,12 +25,12 @@ export async function activateJob(formData: FormData) {
     throw new Error("Failed to activate job");
   }
 
-  // 2. Refresh the relevant dashboard pages
+  // Refresh all connected financial modules
   revalidatePath('/dashboard/activation');
   revalidatePath('/dashboard/clients');
+  revalidatePath('/dashboard/payments');
+  revalidatePath('/dashboard/accounts');
   revalidatePath('/dashboard');
   
-  // 3. Redirect the staff member back to the activation queue
-  // (Using redirect() satisfies TypeScript's Promise<void> requirement!)
   redirect('/dashboard/activation');
 }
