@@ -1,70 +1,85 @@
 'use client'
 
 import { useState, useMemo } from "react"
-import { ArrowDownToLine, ArrowUpFromLine, Search, Filter } from "lucide-react"
+import { ArrowDownToLine, ArrowUpFromLine, Filter, Calendar as CalIcon } from "lucide-react"
 
 export default function FinancialLedger({ revenueList, debitList }: { revenueList: any[], debitList: any[] }) {
   const [activeTab, setActiveTab] = useState<'REVENUE' | 'DEBITS'>('REVENUE')
-  const [selectedMonth, setSelectedMonth] = useState<string>("ALL")
+  
+  // 🟢 FIXED: Automatically defaults to the exact current month string (e.g. "June 2026")
+  const currentMonthString = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthString)
+  
+  // 🟢 NEW: Exact Date Range Selectors
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(amount);
   }
 
-  // Extract unique months (e.g., "May 2026") from both lists for the filter
   const allMonths = useMemo(() => {
     const months = new Set<string>();
+    months.add(currentMonthString); // Always preserve the current month window
     [...revenueList, ...debitList].forEach(item => {
       const d = new Date(item.date);
       months.add(d.toLocaleString('default', { month: 'long', year: 'numeric' }));
     });
-    // Sort chronologically (simplistic sort by string assuming recent years)
     return Array.from(months).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-  }, [revenueList, debitList]);
+  }, [revenueList, debitList, currentMonthString]);
 
-  // Filter data based on selected month
-  const filteredRevenue = revenueList.filter(item => 
-    selectedMonth === "ALL" || new Date(item.date).toLocaleString('default', { month: 'long', year: 'numeric' }) === selectedMonth
-  );
+  // Combined conditional filtering array
+  const filteredRevenue = revenueList.filter(item => {
+    const d = new Date(item.date);
+    const matchesMonth = selectedMonth === "ALL" || d.toLocaleString('default', { month: 'long', year: 'numeric' }) === selectedMonth;
+    const matchesStart = !startDate || d >= new Date(startDate);
+    const matchesEnd = !endDate || d <= new Date(endDate + 'T23:59:59');
+    return matchesMonth && matchesStart && matchesEnd;
+  });
 
-  const filteredDebits = debitList.filter(item => 
-    selectedMonth === "ALL" || new Date(item.date).toLocaleString('default', { month: 'long', year: 'numeric' }) === selectedMonth
-  );
+  const filteredDebits = debitList.filter(item => {
+    const d = new Date(item.date);
+    const matchesMonth = selectedMonth === "ALL" || d.toLocaleString('default', { month: 'long', year: 'numeric' }) === selectedMonth;
+    const matchesStart = !startDate || d >= new Date(startDate);
+    const matchesEnd = !endDate || d <= new Date(endDate + 'T23:59:59');
+    return matchesMonth && matchesStart && matchesEnd;
+  });
 
   return (
     <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
       
-      {/* HEADER & FILTERS */}
-      <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
-          <button 
-            onClick={() => setActiveTab('REVENUE')} 
-            className={`flex-1 sm:w-32 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'REVENUE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
+      {/* FILTER BAR CONTAINER */}
+      <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+        <div className="flex bg-gray-100 p-1 rounded-xl w-full xl:w-auto shrink-0">
+          <button onClick={() => setActiveTab('REVENUE')} className={`flex-1 xl:w-32 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'REVENUE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <ArrowDownToLine size={14} className={activeTab === 'REVENUE' ? 'text-[#84c47c]' : ''}/> Revenue
           </button>
-          <button 
-            onClick={() => setActiveTab('DEBITS')} 
-            className={`flex-1 sm:w-32 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'DEBITS' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
+          <button onClick={() => setActiveTab('DEBITS')} className={`flex-1 xl:w-32 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'DEBITS' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <ArrowUpFromLine size={14} className={activeTab === 'DEBITS' ? 'text-red-500' : ''}/> Debits
           </button>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto relative">
-          <div className="absolute left-3 text-gray-400"><Filter size={14}/></div>
-          <select 
-            value={selectedMonth} 
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="w-full sm:w-48 pl-8 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-700 outline-none focus:border-blue-500 cursor-pointer shadow-sm"
-          >
-            <option value="ALL">All Time History</option>
-            {allMonths.map(month => <option key={month} value={month}>{month}</option>)}
-          </select>
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+          {/* DATE PICKERS */}
+          <div className="flex items-center gap-2 w-full sm:w-auto bg-white border border-gray-200 px-3 py-1.5 rounded-xl shadow-sm">
+            <CalIcon size={14} className="text-gray-400" />
+            <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); if(e.target.value) setSelectedMonth("ALL"); }} className="text-xs font-bold text-gray-700 outline-none bg-transparent" />
+            <span className="text-gray-300 text-xs font-black">TO</span>
+            <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); if(e.target.value) setSelectedMonth("ALL"); }} className="text-xs font-bold text-gray-700 outline-none bg-transparent" />
+          </div>
+
+          {/* DROP-DOWN OPTION */}
+          <div className="relative w-full sm:w-auto shrink-0">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Filter size={14}/></div>
+            <select value={selectedMonth} onChange={(e) => { setSelectedMonth(e.target.value); if(e.target.value !== "ALL") { setStartDate(""); setEndDate(""); } }} className="w-full sm:w-48 pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-700 outline-none focus:border-blue-500 cursor-pointer shadow-sm">
+              <option value="ALL">All Time History</option>
+              {allMonths.map(month => <option key={month} value={month}>{month === currentMonthString ? `${month} (Current)` : month}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* REVENUE TABLE */}
+      {/* REVENUE RENDERING ENGINE */}
       {activeTab === 'REVENUE' && (
         <div className="overflow-x-auto max-h-[500px] overflow-y-auto custom-scrollbar">
           <table className="min-w-full divide-y divide-gray-100">
@@ -102,13 +117,11 @@ export default function FinancialLedger({ revenueList, debitList }: { revenueLis
               ))}
             </tbody>
           </table>
-          {filteredRevenue.length === 0 && (
-             <div className="p-16 text-center text-gray-500 font-medium text-sm">No revenue records found for {selectedMonth === 'ALL' ? 'all time' : selectedMonth}.</div>
-          )}
+          {filteredRevenue.length === 0 && <div className="p-16 text-center text-gray-500 font-medium text-sm">No revenue records found for this period.</div>}
         </div>
       )}
 
-      {/* DEBITS TABLE */}
+      {/* DEBITS RENDERING ENGINE */}
       {activeTab === 'DEBITS' && (
         <div className="overflow-x-auto max-h-[500px] overflow-y-auto custom-scrollbar">
           <table className="min-w-full divide-y divide-gray-100">
@@ -131,9 +144,7 @@ export default function FinancialLedger({ revenueList, debitList }: { revenueLis
                   <td className="px-6 py-4">
                     <p className="font-bold text-sm text-gray-900">{item.category}</p>
                     {(item.reason || item.note) && (
-                      <p className="text-[11px] text-gray-500 mt-0.5 max-w-xs truncate" title={item.note || item.reason}>
-                        {item.reason || item.note}
-                      </p>
+                      <p className="text-[11px] text-gray-500 mt-0.5 max-w-xs truncate" title={item.note || item.reason}>{item.reason || item.note}</p>
                     )}
                   </td>
                   <td className="px-6 py-4">
@@ -150,9 +161,7 @@ export default function FinancialLedger({ revenueList, debitList }: { revenueLis
               ))}
             </tbody>
           </table>
-          {filteredDebits.length === 0 && (
-             <div className="p-16 text-center text-gray-500 font-medium text-sm">No debit records found for {selectedMonth === 'ALL' ? 'all time' : selectedMonth}.</div>
-          )}
+          {filteredDebits.length === 0 && <div className="p-16 text-center text-gray-500 font-medium text-sm">No debit records found for this period.</div>}
         </div>
       )}
     </div>

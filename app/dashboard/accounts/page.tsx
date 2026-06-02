@@ -1,9 +1,10 @@
 import { verifySession } from "@/lib/session"
 import { getAccountsAnalytics } from "@/app/actions/accounts"
-import { DollarSign, ArrowDownToLine, ArrowUpFromLine, Activity, CreditCard, PieChart, List } from "lucide-react"
-import { CashflowChart, DebitCategoryChart } from "@/components/AccountingCharts"
+import { DollarSign, ArrowDownToLine, ArrowUpFromLine, Activity, CreditCard, List } from "lucide-react"
+import { CashflowChart } from "@/components/AccountingCharts"
 import AddDebitForm from "@/components/AddDebitForm"
-import FinancialLedger from "@/components/FinancialLedger" // 🟢 NEW
+import ExpenseChartsWrapper from "@/components/ExpenseChartsWrapper"
+import FinancialLedger from "@/components/FinancialLedger"
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,7 @@ export default async function AccountsPage() {
         <AddDebitForm />
       </div>
 
-      {/* METRICS ROW (🟢 UPDATED: Now emphasizes THIS MONTH) */}
+      {/* METRICS ROW */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Monthly Revenue */}
@@ -59,7 +60,7 @@ export default async function AccountsPage() {
           </div>
         </div>
 
-        {/* Net Cashflow (All Time) */}
+        {/* Net Cashflow */}
         <div className={`rounded-3xl p-6 shadow-sm border flex flex-col justify-between hover:shadow-md transition relative overflow-hidden ${isProfitable ? 'bg-gradient-to-br from-[#2d4a2a] to-[#1e331c] border-[#2d4a2a] text-white' : 'bg-gradient-to-br from-red-900 to-red-950 border-red-900 text-white'}`}>
           <div className="absolute right-0 top-0 opacity-10 -mr-4 -mt-4"><DollarSign size={120}/></div>
           <div className="flex justify-between items-start mb-4 relative z-10">
@@ -87,7 +88,8 @@ export default async function AccountsPage() {
 
       {/* CHARTS ROW */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cashflow Chart */}
+        
+        {/* Cashflow Chart (Spans 2 columns) */}
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
            <div className="flex items-center gap-2 mb-6 border-b pb-4">
              <Activity className="text-blue-500" size={20}/>
@@ -96,25 +98,12 @@ export default async function AccountsPage() {
            <CashflowChart data={analytics.monthlyTrend} />
         </div>
 
-        {/* Debit Category Breakdown */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col">
-           <div className="flex items-center gap-2 mb-6 border-b pb-4">
-             <PieChart className="text-red-500" size={20}/>
-             <h3 className="text-sm font-black text-gray-800 uppercase tracking-widest">Expense Breakdown</h3>
-           </div>
-           <div className="flex-1 min-h-[300px]">
-             {analytics.debits.byCategory.length > 0 ? (
-               <DebitCategoryChart data={analytics.debits.byCategory} />
-             ) : (
-               <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                 <p className="text-sm font-medium">No expenses logged yet.</p>
-               </div>
-             )}
-           </div>
-        </div>
+        {/* 🟢 FIXED: Features the interactive Pie and Bar combo toggler */}
+        <ExpenseChartsWrapper data={analytics.debits.byCategoryThisMonth} />
+
       </div>
 
-      {/* 🟢 NEW: MASTER FINANCIAL LEDGER */}
+      {/* FINANCIAL LEDGER */}
       <div>
         <div className="flex items-center gap-2 mb-4 px-2">
           <List className="text-[#84c47c]" size={22}/>

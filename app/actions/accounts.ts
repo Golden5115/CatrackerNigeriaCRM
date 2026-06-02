@@ -1,19 +1,25 @@
+
 'use server'
 
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { headers } from "next/headers" // 🟢 NEW: The ultimate cache buster
 
 export async function getAccountsAnalytics() {
+  // 🟢 FIXED: By calling headers(), Next.js is FORCED to run this fresh every single time.
+  // It completely destroys the frozen Vercel build cache.
+  await headers(); 
+  
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
   startOfWeek.setHours(0,0,0,0);
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
-  // 1. PULL REVENUE PURELY FROM PAYMENTS (JOBS)
+  // 1. PULL REVENUE PURELY FROM PAYMENTS
   const paidJobs = await prisma.job.findMany({ 
     where: { amountPaid: { gt: 0 } },
-    include: { vehicle: { include: { client: true } } }, // 🟢 NEW: Fetch client details for the ledger
+    include: { vehicle: { include: { client: true } } },
     orderBy: { updatedAt: 'desc' }
   })
 
@@ -25,12 +31,20 @@ export async function getAccountsAnalytics() {
   let revenueThisMonth = 0;
   let revenueThisWeek = 0;
 
+  // 🟢 FIXED: Explicitly naming months to prevent Node.js timezone/locale bugs
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
   const monthlyTrend = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-    return { month: d.getMonth(), year: d.getFullYear(), name: d.toLocaleString('default', { month: 'short' }), revenue: 0, debits: 0 };
+    return { 
+      month: d.getMonth(), 
+      year: d.getFullYear(), 
+      name: `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`, // e.g., "Jun 26"
+      revenue: 0,
+      debits: 0
+    };
   });
 
-  // 🟢 NEW: Create a clean array for the Revenue Ledger
   const revenueList = paidJobs.map(job => {
     const amt = Number(job.amountPaid || 0);
     const date = job.installDate ? new Date(job.installDate) : (job.paymentDate ? new Date(job.paymentDate) : new Date(job.updatedAt));
@@ -47,12 +61,12 @@ export async function getAccountsAnalytics() {
     return {
       id: job.id,
       clientName: job.vehicle?.client?.fullName || 'Unknown Client',
-      vehicleName: `${job.vehicle?.name} (${job.vehicle?.plateNumber || 'No Plate'})`,
+      vehicleName: `${job.vehicle?.name || 'Unknown Vehicle'} (${job.vehicle?.plateNumber || 'No Plate'})`,
       amount: amt,
       date: date.toISOString(),
       collector: job.paymentCollector || 'System'
     }
-  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  });
 
   // 2. PULL DEBIT/EXPENSE DATA
   const debits = await prisma.debit.findMany({
@@ -62,17 +76,23 @@ export async function getAccountsAnalytics() {
 
   let totalDebits = 0;
   let debitsThisMonth = 0;
-  const debitCategoryTotals: Record<string, number> = {};
+  
+  // 🟢 FIXED: We will ONLY aggregate categories for the current month now!
+  const debitCategoryTotalsThisMonth: Record<string, number> = {};
 
-  // 🟢 NEW: Create a clean array for the Debit Ledger
   const debitList = debits.map(debit => {
     const amt = Number(debit.amount);
     const date = new Date(debit.date);
     
     totalDebits += amt;
-    if (date >= startOfMonth) debitsThisMonth += amt;
-    debitCategoryTotals[debit.category] = (debitCategoryTotals[debit.category] || 0) + amt;
 
+    // Add to monthly totals & Pie Chart categories
+    if (date >= startOfMonth) {
+       debitsThisMonth += amt;
+       debitCategoryTotalsThisMonth[debit.category] = (debitCategoryTotalsThisMonth[debit.category] || 0) + amt;
+    }
+
+    // Add to 6-month trend chart
     if (date >= sixMonthsAgo) {
       const bucket = monthlyTrend.find(b => b.month === date.getMonth() && b.year === date.getFullYear());
       if (bucket) bucket.debits += amt;
@@ -91,14 +111,20 @@ export async function getAccountsAnalytics() {
 
   return {
     revenue: { total: totalRevenue, thisMonth: revenueThisMonth, thisWeek: revenueThisWeek },
-    debits: { total: totalDebits, thisMonth: debitsThisMonth, byCategory: Object.entries(debitCategoryTotals).map(([name, value]) => ({ name, value })) },
     pendingPaymentJobs,
+    debits: {
+      total: totalDebits,
+      thisMonth: debitsThisMonth,
+      byCategoryThisMonth: Object.entries(debitCategoryTotalsThisMonth).map(([name, value]) => ({ name, value })), // 🟢 Passed to Pie Chart
+    },
     netCashflow: totalRevenue - totalDebits,
     monthlyTrend,
-    revenueList, // 🟢 Passed to frontend
-    debitList    // 🟢 Passed to frontend
+    revenueList,
+    debitList
   }
 }
+
+// ... Keep your addDebit function exactly the same below this!
 
 export async function addDebit(formData: FormData) {
   try {
