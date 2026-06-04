@@ -7,12 +7,13 @@ export default function DeleteClientButton({ clientId }: { clientId: string }) {
   return (
     <button 
       onClick={async () => {
-        if (confirm("Are you sure? This will delete the client, their vehicles, and jobs permanently.")) {
+        // 🟢 FIXED: Friendly warning message
+        if (confirm("Archive this client? They will be hidden from the CRM, but their data will be saved safely.")) {
           await deleteClient(clientId)
         }
       }}
-      className="text-gray-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition"
-      title="Delete Client"
+      className="text-gray-400 hover:text-orange-600 p-2 hover:bg-orange-50 rounded-lg transition"
+      title="Archive Client"
     >
       <Trash2 size={20} />
     </button>

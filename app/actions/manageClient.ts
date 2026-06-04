@@ -4,14 +4,24 @@ import { prisma } from "@/lib/prisma"
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-// --- DELETE CLIENT ---
+// --- SOFT DELETE CLIENT (ARCHIVE) ---
 export async function deleteClient(clientId: string) {
-  const vehicles = await prisma.vehicle.findMany({ where: { clientId } });
-  const vehicleIds = vehicles.map(v => v.id);
+  // 🟢 FIXED: No longer wipes the database. Just hides the client!
+  await prisma.client.update({
+    where: { id: clientId },
+    data: { isArchived: true }
+  });
 
-  await prisma.job.deleteMany({ where: { vehicleId: { in: vehicleIds } } });
-  await prisma.vehicle.deleteMany({ where: { clientId } });
-  await prisma.client.delete({ where: { id: clientId } });
+  revalidatePath('/dashboard/leads')
+  revalidatePath('/dashboard/clients')
+}
+
+// --- RESTORE CLIENT (UN-ARCHIVE) ---
+export async function restoreClient(clientId: string) {
+  await prisma.client.update({
+    where: { id: clientId },
+    data: { isArchived: false }
+  });
 
   revalidatePath('/dashboard/leads')
   revalidatePath('/dashboard/clients')

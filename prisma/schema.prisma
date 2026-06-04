@@ -48,6 +48,7 @@ model Client {
   createdBy   User?     @relation("CreatedBy", fields: [createdById], references: [id])
   vehicles    Vehicle[]
   invoices    Invoice[]
+  isArchived  Boolean   @default(false) // 🟢 NEW: Soft delete flag!
   @@index([phoneNumber])
   @@index([fullName])
   importBatchId String?  // 👈 NEW: Allows us to track and rollback imports

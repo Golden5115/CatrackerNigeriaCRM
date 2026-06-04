@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from "react" // 👈 NEW: Imported useRef
+import { useState, useRef } from "react" 
 import { claimJob, submitInstallation, unclaimJob, markJobAsLost } from "@/app/actions/installer"
 import { processHardwareSwap, resolveMaintenanceJob } from "@/app/actions/support"
 import { scheduleInstallation, logPendingReason } from "@/app/actions/updateLead"
@@ -18,24 +18,22 @@ interface LeadActionMenuProps {
   vehicleName?: string
   installerName?: string | null
   currentUserRole?: string 
-  clientEmail?: string | null // 👈 Add this line
+  clientEmail?: string | null
 }
 
 export default function LeadActionMenu({ 
-  jobId, currentStatus, jobType, vehicleId, installerId, currentUserId, vehicleName, installerName, currentUserRole, clientEmail // 👈 Added here!
+  jobId, currentStatus, jobType, vehicleId, installerId, currentUserId, vehicleName, installerName, currentUserRole, clientEmail
 }: LeadActionMenuProps) {
   
   const [isOpen, setIsOpen] = useState(false)
-  const [dropDirection, setDropDirection] = useState<'down' | 'up'>('down') // 👈 NEW: Tracks which way the menu should open
-  const buttonRef = useRef<HTMLButtonElement>(null) // 👈 NEW: Used to calculate screen space
+  const [dropDirection, setDropDirection] = useState<'down' | 'up'>('down')
+  const buttonRef = useRef<HTMLButtonElement>(null)
   
-  // Existing Modals
   const [showInstallModal, setShowInstallModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
   const [showLostModal, setShowLostModal] = useState(false)
   const [showClaimModal, setShowClaimModal] = useState(false) 
   
-  // New Modals (Schedule & Pending)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [scheduleDate, setScheduleDate] = useState("")
   const [showPendingModal, setShowPendingModal] = useState(false)
@@ -47,14 +45,11 @@ export default function LeadActionMenu({
   const [isClaiming, setIsClaiming] = useState(false)
   const [isUnclaiming, setIsUnclaiming] = useState(false)
 
-  // 🛑 NEW: Smart Dropdown Positioning Logic
   const toggleDropdown = () => {
     if (!isOpen && buttonRef.current) {
-      // Calculate where the button is on the screen
       const rect = buttonRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
       
-      // If there is less than 320px of space below the button, open upwards!
       if (spaceBelow < 320) {
         setDropDirection('up');
       } else {
@@ -64,7 +59,6 @@ export default function LeadActionMenu({
     setIsOpen(!isOpen);
   }
 
-  // 1. HANDLE CLAIMING / DISPATCHING
   const handleClaim = async () => {
     setIsClaiming(true)
     try {
@@ -78,7 +72,6 @@ export default function LeadActionMenu({
     setIsOpen(false)
   }
 
-  // 2. HANDLE UNCLAIMING
   const handleUnclaim = async () => {
     if (!confirm("Are you sure you want to return this job to the pool?")) return;
     setIsUnclaiming(true)
@@ -92,7 +85,6 @@ export default function LeadActionMenu({
     setIsOpen(false)
   }
 
-  // 3. SMART LOCK LOGIC
   const isAdminOrOps = currentUserRole === 'ADMIN' || currentUserRole === 'OPERATIONS'
   const isMyJob = installerId === currentUserId
   const canManageJob = isMyJob || isAdminOrOps 
@@ -115,41 +107,47 @@ export default function LeadActionMenu({
   return (
     <div className={`relative ${isOpen ? 'z-50' : 'z-10'}`}>
       
-      {/* 👈 FIX: Added ref and custom toggle function to the trigger button */}
       <button ref={buttonRef} onClick={toggleDropdown} className="p-2 hover:bg-gray-100 rounded-full transition">
         <MoreVertical size={16} className="text-gray-500" />
       </button>
 
-      {/* DROPDOWN MENU */}
+      {/* 🟢 FIXED: Mobile Bottom Sheet & Desktop Dropdown Menu */}
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
+          {/* Backdrop: Darkens the screen slightly on mobile, invisible on desktop */}
+          <div className="fixed inset-0 z-40 bg-black/20 md:bg-transparent transition-opacity" onClick={() => setIsOpen(false)}></div>
           
-          {/* 👈 FIX: The menu now dynamically switches between 'top-full mt-2' and 'bottom-full mb-2' */}
-          <div className={`absolute right-0 w-56 bg-white rounded-lg shadow-2xl border border-gray-100 z-20 overflow-hidden ${
-            dropDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
-          }`}>
+          <div className={`
+            fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] overflow-hidden pb-8 animate-in slide-in-from-bottom-4
+            md:absolute md:right-0 md:left-auto md:bottom-auto md:w-56 md:rounded-lg md:shadow-2xl md:border md:border-gray-100 md:pb-0 md:animate-none
+            ${dropDirection === 'up' ? 'md:bottom-full md:mb-2' : 'md:top-full md:mt-2'}
+          `}>
             
+            {/* Mobile Drag Handle (Only visible on small screens) */}
+            <div className="w-full flex justify-center pt-4 pb-2 md:hidden" onClick={() => setIsOpen(false)}>
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
+
            {/* UNCLAIMED JOBS */}
            {(currentStatus === 'NEW_LEAD' || currentStatus === 'SCHEDULED') && (
                <>
-                 <button onClick={() => { setShowClaimModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-bold border-b border-gray-50">
-                   <UserPlus size={16} /> Claim & Dispatch
+                 <button onClick={() => { setShowClaimModal(true); setIsOpen(false); }} className="w-full text-left px-5 md:px-4 py-4 md:py-3 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-3 md:gap-2 font-bold border-b border-gray-50">
+                   <UserPlus size={18} className="md:w-4 md:h-4" /> Claim & Dispatch
                  </button>
 
                  {currentStatus === 'NEW_LEAD' && (
-                   <button onClick={() => { setShowScheduleModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-purple-600 hover:bg-purple-50 flex items-center gap-2 font-bold border-b border-gray-50">
-                     <Calendar size={16} /> Schedule Installation
+                   <button onClick={() => { setShowScheduleModal(true); setIsOpen(false); }} className="w-full text-left px-5 md:px-4 py-4 md:py-3 text-sm text-purple-600 hover:bg-purple-50 flex items-center gap-3 md:gap-2 font-bold border-b border-gray-50">
+                     <Calendar size={18} className="md:w-4 md:h-4" /> Schedule Installation
                    </button>
                  )}
 
-                 <button onClick={() => { setShowPendingModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2 font-bold border-b border-gray-50">
-                   <AlertCircle size={16} /> Log Delay/Pending
+                 <button onClick={() => { setShowPendingModal(true); setIsOpen(false); }} className="w-full text-left px-5 md:px-4 py-4 md:py-3 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-3 md:gap-2 font-bold border-b border-gray-50">
+                   <AlertCircle size={18} className="md:w-4 md:h-4" /> Log Delay/Pending
                  </button>
                  
                  {isAdminOrOps && (
-                   <button onClick={() => { setShowLostModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 font-bold">
-                     <XCircle size={16} /> Mark as Lost
+                   <button onClick={() => { setShowLostModal(true); setIsOpen(false); }} className="w-full text-left px-5 md:px-4 py-4 md:py-3 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-3 md:gap-2 font-bold">
+                     <XCircle size={18} className="md:w-4 md:h-4" /> Mark as Lost
                    </button>
                  )}
                </>
@@ -159,23 +157,23 @@ export default function LeadActionMenu({
             {currentStatus === 'IN_PROGRESS' && canManageJob && (
                <>
                  {jobType === 'NEW_INSTALL' ? (
-                   <button onClick={() => { setShowInstallModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2 font-bold border-b border-gray-50">
-                     <Wrench size={16} /> Finish Installation
+                   <button onClick={() => { setShowInstallModal(true); setIsOpen(false); }} className="w-full text-left px-5 md:px-4 py-4 md:py-3 text-sm text-green-600 hover:bg-green-50 flex items-center gap-3 md:gap-2 font-bold border-b border-gray-50">
+                     <Wrench size={18} className="md:w-4 md:h-4" /> Finish Installation
                    </button>
                  ) : (
-                   <button onClick={() => { setShowSupportModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 font-bold border-b border-gray-50">
-                     <AlertTriangle size={16} /> Resolve Support Ticket
+                   <button onClick={() => { setShowSupportModal(true); setIsOpen(false); }} className="w-full text-left px-5 md:px-4 py-4 md:py-3 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-3 md:gap-2 font-bold border-b border-gray-50">
+                     <AlertTriangle size={18} className="md:w-4 md:h-4" /> Resolve Support Ticket
                    </button>
                  )}
 
-                 <button onClick={handleUnclaim} disabled={isUnclaiming} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-bold border-b border-gray-50">
-                   {isUnclaiming ? <Loader2 className="animate-spin" size={16}/> : <RotateCcw size={16} />}
+                 <button onClick={handleUnclaim} disabled={isUnclaiming} className="w-full text-left px-5 md:px-4 py-4 md:py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 md:gap-2 font-bold border-b border-gray-50">
+                   {isUnclaiming ? <Loader2 className="animate-spin" size={18}/> : <RotateCcw size={18} className="md:w-4 md:h-4" />}
                    Return Job to Pool
                  </button>
 
                  {isAdminOrOps && (
-                   <button onClick={() => { setShowLostModal(true); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 font-bold">
-                     <XCircle size={16} /> Mark as Lost
+                   <button onClick={() => { setShowLostModal(true); setIsOpen(false); }} className="w-full text-left px-5 md:px-4 py-4 md:py-3 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-3 md:gap-2 font-bold">
+                     <XCircle size={18} className="md:w-4 md:h-4" /> Mark as Lost
                    </button>
                  )}
                </>
@@ -191,7 +189,7 @@ export default function LeadActionMenu({
 
       {/* --- 1. CLAIM & DISPATCH MODAL --- */}
       {showClaimModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -229,7 +227,7 @@ export default function LeadActionMenu({
 
       {/* --- 2. SCHEDULE DATE MODAL --- */}
       {showScheduleModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex justify-between items-center mb-4">
                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -262,7 +260,7 @@ export default function LeadActionMenu({
 
       {/* --- 3. PENDING REASON MODAL --- */}
       {showPendingModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex justify-between items-center mb-4">
                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -296,7 +294,7 @@ export default function LeadActionMenu({
 
       {/* --- 4. NEW INSTALLATION MODAL --- */}
       {showInstallModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
                <h3 className="text-xl font-bold text-gray-800">Complete Installation</h3>
@@ -313,7 +311,6 @@ export default function LeadActionMenu({
             }} className="space-y-4">
                <input type="hidden" name="jobId" value={jobId} />
                
-               {/* 🟢 NEW: Compulsory Email Input (ONLY shows if client has no email) */}
                {!clientEmail && (
                  <div>
                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
@@ -329,7 +326,6 @@ export default function LeadActionMenu({
                  </div>
                )}
 
-               {/* 🟢 FIXED: Installation Date (Default is now NIL) */}
                <div>
                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
                    Installation Date <span className="text-red-500">*</span>
@@ -370,7 +366,7 @@ export default function LeadActionMenu({
 
       {/* --- 5. SUPPORT & SWAP MODAL --- */}
       {showSupportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border-t-4 border-orange-500">
             <div className="flex justify-between items-center mb-4">
                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -432,7 +428,7 @@ export default function LeadActionMenu({
 
       {/* --- 6. MARK AS LOST MODAL --- */}
       {showLostModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
