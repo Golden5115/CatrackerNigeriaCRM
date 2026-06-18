@@ -43,15 +43,18 @@ model Client {
   address     String?
   state       String?
   leadSource  String?
+  whatsapp    String?          // WhatsApp number (from CTN feed or manual entry)
+  ctnLeadId   Int?     @unique // CTN website lead ID — dedup key for feed imports
   createdById String?
   createdAt   DateTime  @default(now())
   createdBy   User?     @relation("CreatedBy", fields: [createdById], references: [id])
   vehicles    Vehicle[]
   invoices    Invoice[]
-  isArchived  Boolean   @default(false) // 🟢 NEW: Soft delete flag!
+  isArchived  Boolean   @default(false) // 🟢 Soft delete flag
+  deletedAt   DateTime? // When it was sent to the recycle bin
   @@index([phoneNumber])
   @@index([fullName])
-  importBatchId String?  // 👈 NEW: Allows us to track and rollback imports
+  importBatchId String?  // Allows us to track and rollback imports
 }
 
 model Vehicle {
@@ -63,6 +66,8 @@ model Vehicle {
   color       String?
   jobs        Job[]
   client      Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  isArchived  Boolean   @default(false)
+  deletedAt   DateTime?
   @@index([plateNumber])
 }
 
@@ -120,6 +125,9 @@ model Job {
   vehicle           Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   scheduledDate    DateTime?
   pendingReason    String?
+  onsiteContact    String?   // Proxy on-site contact info (from CTN feed: "Name / Phone / Address")
+  isArchived       Boolean   @default(false)
+  deletedAt        DateTime?
   @@index([status])
 }
 
@@ -202,6 +210,8 @@ model Invoice {
   client          Client?       @relation(fields: [clientId], references: [id])
   createdBy       User?         @relation(fields: [createdById], references: [id])
   items           InvoiceItem[]
+  isArchived      Boolean       @default(false)
+  deletedAt       DateTime?
 }
 
 model InvoiceItem {
@@ -240,6 +250,8 @@ model Support {
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  isArchived    Boolean  @default(false)
+  deletedAt     DateTime?
 }
 
 model Debit {
@@ -261,4 +273,14 @@ model Debit {
 
   @@index([category])
   @@index([date])
+}
+
+// CTN Lead Feed sync state — singleton row tracks the polling cursor
+model CtnSyncMeta {
+  id        String    @id @default("singleton")
+  lastId    Int       @default(0)
+  lastRunAt DateTime?
+  lastCount Int       @default(0)
+  lastError String?
+  updatedAt DateTime  @updatedAt
 }

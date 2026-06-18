@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/ctn-sync",
+      "schedule": "*/10 * * * *"
+    }
+  ]
+}

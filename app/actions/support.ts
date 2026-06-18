@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 
 export async function getSupportTickets() {
   return await prisma.support.findMany({ 
+    where: { isArchived: false },
     orderBy: { date: 'desc' } 
   })
 }
@@ -96,8 +97,21 @@ export async function resolveSupportTicket(formData: FormData) {
 
 export async function deleteSupportTicket(formData: FormData) {
   const id = formData.get('id') as string
-  await prisma.support.delete({ where: { id } })
+  await prisma.support.update({ 
+    where: { id },
+    data: { isArchived: true, deletedAt: new Date() }
+  })
   revalidatePath('/dashboard/support')
+  revalidatePath('/dashboard/recycle-bin')
+}
+
+export async function restoreSupportTicket(id: string) {
+  await prisma.support.update({ 
+    where: { id },
+    data: { isArchived: false, deletedAt: null }
+  })
+  revalidatePath('/dashboard/support')
+  revalidatePath('/dashboard/recycle-bin')
 }
 
 // Legacy imports to protect other files from build errors

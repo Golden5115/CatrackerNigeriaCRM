@@ -164,8 +164,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         </div>
 
         {/* LINE ITEMS TABLE */}
-        <div className="mt-4 rounded-2xl overflow-hidden border border-gray-200">
-          <table className="w-full text-left border-collapse">
+        <div className="mt-4 rounded-2xl overflow-x-auto border border-gray-200 custom-scrollbar">
+          <table className="w-full min-w-[600px] text-left border-collapse">
             <thead className="bg-gray-50 border-b border-gray-200 print:bg-gray-100">
               <tr>
                 <th className="py-4 px-6 text-[10px] font-black text-gray-500 uppercase tracking-widest w-1/2 print:px-4">Description</th>

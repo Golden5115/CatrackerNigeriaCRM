@@ -4,11 +4,11 @@ import Link from "next/link";
 import React, { Suspense } from "react";
 import { 
   Phone, Car, Plus, Clock, Calendar, Pencil, Hash, Wrench, 
-  AlertCircle, XCircle, Loader2, User
+  AlertCircle, XCircle, Loader2, User, Globe
 } from "lucide-react";
 import LeadActionMenu from "@/components/LeadActionMenu";
 import SortControl from "@/components/SortControl"; 
-import DeleteClientButton from "@/components/DeleteClientButton";
+import DeleteJobButton from "@/components/DeleteJobButton";
 import LocalSearchInput from "@/components/LocalSearchInput";
 import Pagination from "@/components/Pagination";
 
@@ -35,7 +35,9 @@ async function LeadsTable({
   const whereClause: any = {
     status: { in: ['NEW_LEAD', 'SCHEDULED', 'IN_PROGRESS', 'LEAD_LOST'] },
     jobType: 'NEW_INSTALL',
+    isArchived: false,
     vehicle: { 
+      isArchived: false,
       client: { isArchived: false } // Hides them from the pipeline
     },
     ...(query ? {
@@ -105,8 +107,13 @@ async function LeadsTable({
                           <div>
                             <div className="font-bold text-sm text-gray-900">{client.fullName}</div>
                             <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-0.5"><Phone size={10} /> {client.phoneNumber}</div>
-                            <div className="text-[9px] text-gray-400 mt-0.5 flex items-center gap-1">
+                             <div className="text-[9px] text-gray-400 mt-0.5 flex items-center gap-1">
                               <User size={8} /> Added by: <span className="font-medium text-gray-600">{client.createdBy?.fullName || "System"}</span>
+                              {client.leadSource === 'CTN Website' && (
+                                <span className="ml-1 inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[8px] px-1 py-0.5 rounded border border-emerald-200 font-bold">
+                                  <Globe size={7} /> CTN
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -194,6 +201,11 @@ async function LeadsTable({
                           <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-0.5"><Phone size={10} /> {client.phoneNumber}</div>
                           <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
                             <User size={10} /> Added by: <span className="font-medium text-gray-600">{client.createdBy?.fullName || "System"}</span>
+                            {client.leadSource === 'CTN Website' && (
+                              <span className="ml-1 inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded border border-emerald-200 font-bold">
+                                <Globe size={8} /> CTN
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -254,7 +266,7 @@ async function LeadsTable({
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end items-center gap-1">
                         {canEdit && <Link href={`/dashboard/clients/${client.id}/edit`} className="text-gray-400 hover:text-blue-600 p-1.5 hover:bg-blue-50 rounded-lg transition"><Pencil size={14} /></Link>}
-                        {canDelete && <DeleteClientButton clientId={client.id} />}
+                        {canDelete && <DeleteJobButton jobId={job.id} />}
                         <div className="ml-1 border-l pl-1">
                           {/* 🟢 FIXED: Exact Props Restored */}
                           <LeadActionMenu 
@@ -308,6 +320,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-gray-500">Manage new installations and dispatch field techs.</p>
         </div>
         <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-3">
+          {isAdmin && (
+            <Link href="/dashboard/leads/sync" className="w-full sm:w-auto justify-center bg-white text-gray-700 border border-gray-200 px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 transition shadow-sm">
+              <Globe size={14} className="text-emerald-600" /> CTN Sync
+            </Link>
+          )}
           {canEdit && (
             <Link href="/dashboard/leads/create" className="w-full sm:w-auto justify-center bg-[#84c47c] text-white px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-[#6aa663] transition shadow-sm">
               <Plus size={14} /> Add New Lead

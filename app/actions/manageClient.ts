@@ -5,32 +5,154 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 // --- SOFT DELETE CLIENT (ARCHIVE) ---
+// Releases all assigned devices and SIMs back to IN_STOCK before archiving
 export async function deleteClient(clientId: string) {
-  // 🟢 FIXED: No longer wipes the database. Just hides the client!
-  await prisma.client.update({
-    where: { id: clientId },
-    data: { isArchived: true }
-  });
+  await prisma.$transaction(async (tx) => {
+    // 1. Find all jobs under this client's vehicles
+    const vehicles = await tx.vehicle.findMany({
+      where: { clientId },
+      include: { jobs: { select: { id: true, deviceId: true, simCardId: true } } }
+    })
+
+    // 2. Release all assigned devices and SIMs back to inventory
+    for (const vehicle of vehicles) {
+      for (const job of vehicle.jobs) {
+        if (job.deviceId) {
+          await tx.device.update({
+            where: { id: job.deviceId },
+            data: { status: 'IN_STOCK' }
+          })
+        }
+        if (job.simCardId) {
+          await tx.simCard.update({
+            where: { id: job.simCardId },
+            data: { status: 'IN_STOCK' }
+          })
+        }
+      }
+    }
+
+    // 3. Archive the client (soft delete)
+    await tx.client.update({
+      where: { id: clientId },
+      data: { isArchived: true, deletedAt: new Date() }
+    })
+  })
 
   revalidatePath('/dashboard/leads')
   revalidatePath('/dashboard/clients')
+  revalidatePath('/dashboard/inventory')
+  revalidatePath('/dashboard/recycle-bin')
 }
 
 // --- RESTORE CLIENT (UN-ARCHIVE) ---
 export async function restoreClient(clientId: string) {
   await prisma.client.update({
     where: { id: clientId },
-    data: { isArchived: false }
+    data: { isArchived: false, deletedAt: null }
   });
 
   revalidatePath('/dashboard/leads')
   revalidatePath('/dashboard/clients')
+  revalidatePath('/dashboard/recycle-bin')
+}
+
+// --- DELETE SINGLE JOB TICKET (from Sales Pipeline) ---
+// Only removes the job + its vehicle, NOT the client or other jobs.
+// Releases any assigned device/SIM back to IN_STOCK.
+export async function deleteJobTicket(jobId: string) {
+  await prisma.$transaction(async (tx) => {
+    // 1. Get the job with its hardware assignments
+    const job = await tx.job.findUnique({
+      where: { id: jobId },
+      select: { id: true, vehicleId: true, deviceId: true, simCardId: true }
+    })
+    if (!job) throw new Error('Job not found')
+
+    // 2. Release device back to inventory
+    if (job.deviceId) {
+      await tx.device.update({
+        where: { id: job.deviceId },
+        data: { status: 'IN_STOCK' }
+      })
+    }
+
+    // 3. Release SIM back to inventory
+    if (job.simCardId) {
+      await tx.simCard.update({
+        where: { id: job.simCardId },
+        data: { status: 'IN_STOCK' }
+      })
+    }
+
+    // 4. Archive the job ticket (Soft delete) and clear hardware
+    await tx.job.update({ 
+      where: { id: jobId },
+      data: { 
+        isArchived: true, 
+        deletedAt: new Date(),
+        deviceId: null,
+        simCardId: null
+      }
+    })
+
+    // 5. Check if this vehicle has any other active jobs
+    const remainingJobs = await tx.job.count({ 
+      where: { vehicleId: job.vehicleId, isArchived: false } 
+    })
+
+    // 6. If no other active jobs reference this vehicle, archive it too
+    if (remainingJobs === 0) {
+      await tx.vehicle.update({ 
+        where: { id: job.vehicleId },
+        data: { isArchived: true, deletedAt: new Date() }
+      })
+    }
+  })
+
+  revalidatePath('/dashboard/leads')
+  revalidatePath('/dashboard/clients')
+  revalidatePath('/dashboard/inventory')
+  revalidatePath('/dashboard/recycle-bin')
+}
+
+// --- RESTORE SINGLE JOB TICKET ---
+export async function restoreJobTicket(jobId: string) {
+  await prisma.$transaction(async (tx) => {
+    const job = await tx.job.update({
+      where: { id: jobId },
+      data: { isArchived: false, deletedAt: null }
+    })
+
+    // Ensure vehicle is also un-archived if it was archived
+    await tx.vehicle.update({
+      where: { id: job.vehicleId },
+      data: { isArchived: false, deletedAt: null }
+    })
+  })
+
+  revalidatePath('/dashboard/leads')
+  revalidatePath('/dashboard/clients')
+  revalidatePath('/dashboard/recycle-bin')
 }
 
 // --- DELETE SINGLE VEHICLE ---
 export async function deleteVehicle(vehicleId: string) {
-  await prisma.vehicle.delete({ where: { id: vehicleId } });
+  await prisma.vehicle.update({ 
+    where: { id: vehicleId },
+    data: { isArchived: true, deletedAt: new Date() }
+  });
   revalidatePath('/dashboard/clients/[id]/edit'); 
+  revalidatePath('/dashboard/recycle-bin'); 
+}
+
+// --- RESTORE SINGLE VEHICLE ---
+export async function restoreVehicle(vehicleId: string) {
+  await prisma.vehicle.update({ 
+    where: { id: vehicleId },
+    data: { isArchived: false, deletedAt: null }
+  });
+  revalidatePath('/dashboard/recycle-bin'); 
 }
 
 // --- UPDATE CLIENT & VEHICLES ---

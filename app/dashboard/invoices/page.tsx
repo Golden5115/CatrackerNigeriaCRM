@@ -4,6 +4,7 @@ import { Plus, FileText, CheckCircle, AlertCircle } from "lucide-react"
 
 export default async function InvoicesList() {
   const invoices = await prisma.invoice.findMany({
+    where: { isArchived: false },
     orderBy: { createdAt: 'desc' }
   });
 

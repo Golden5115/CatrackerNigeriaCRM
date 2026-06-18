@@ -85,7 +85,7 @@ export default function EditInvoiceForm({ invoice }: { invoice: any }) {
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Client Name *</label>
                 <input value={clientName} onChange={(e)=>setClientName(e.target.value)} className="w-full p-2.5 border rounded-lg outline-none" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone</label>
                   <input value={clientPhone} onChange={(e)=>setClientPhone(e.target.value)} className="w-full p-2.5 border rounded-lg outline-none" />
@@ -107,7 +107,7 @@ export default function EditInvoiceForm({ invoice }: { invoice: any }) {
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Subject</label>
                 <input value={subject} onChange={(e)=>setSubject(e.target.value)} className="w-full p-2.5 border rounded-lg outline-none" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Issue Date</label>
                   <input type="date" value={issueDate} onChange={(e)=>setIssueDate(e.target.value)} className="w-full p-2.5 border rounded-lg outline-none" />
@@ -123,8 +123,9 @@ export default function EditInvoiceForm({ invoice }: { invoice: any }) {
         {/* LINE ITEMS */}
         <div className="space-y-2">
           <h4 className="font-bold text-gray-800 border-b pb-2">Line Items</h4>
-          <div className="bg-gray-50 rounded-xl p-1">
-            <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+          <div className="bg-gray-50 rounded-xl p-1 overflow-x-auto w-full custom-scrollbar">
+            <div className="min-w-[700px]">
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
               <div className="col-span-6">Description</div>
               <div className="col-span-2 text-center">Qty / Rate</div>
               <div className="col-span-2 text-right">Unit Price (₦)</div>
@@ -152,6 +153,7 @@ export default function EditInvoiceForm({ invoice }: { invoice: any }) {
                 )}
               </div>
             ))}
+            </div>
           </div>
 
           <button onClick={() => setItems([...items, { description: "", quantity: 1, unitPrice: 0 }])} className="text-sm font-bold text-[#84c47c] flex items-center gap-1 hover:text-[#6aa663] px-2 py-2">

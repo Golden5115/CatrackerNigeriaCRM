@@ -33,8 +33,9 @@ async function ClientsTable({
   }
 
   const whereClause: any = {
+    isArchived: false,
     OR: [
-      { vehicles: { some: { jobs: { some: { status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE', 'LEAD_LOST'] } } } } } },
+      { vehicles: { some: { jobs: { some: { status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE', 'LEAD_LOST'] }, isArchived: false } }, isArchived: false } } },
       { importBatchId: { not: null } }
     ]
   };
@@ -65,7 +66,14 @@ async function ClientsTable({
     prisma.client.count({ where: whereClause }),
     prisma.client.findMany({
       where: whereClause,
-      include: { vehicles: { include: { jobs: true } } },
+      include: { 
+        vehicles: { 
+          where: { isArchived: false },
+          include: { 
+            jobs: { where: { isArchived: false } } 
+          } 
+        } 
+      },
       orderBy: orderBy,
       skip: (page - 1) * pageSize, take: pageSize, 
     })

@@ -25,7 +25,7 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next()
 }
 
-// Routes where Middleware runs
+// Routes where Middleware runs (API routes excluded — they handle their own auth)
 export const config = {
   matcher: ['/dashboard/:path*', '/login'],
 }

@@ -8,7 +8,8 @@ import {
   TrendingUp, Menu, X, Wrench,
   FileText,
   Car,
-  PieChart // 🟢 NEW: Imported a cool icon for the Accounts module
+  PieChart, // 🟢 NEW: Imported a cool icon for the Accounts module
+  Trash2
 } from "lucide-react";
 import Logo from "./Logo";
 import SearchInput from "./SearchInput";
@@ -33,6 +34,7 @@ const allMenuItems = [
   { name: "Accounts & Finance", href: "/dashboard/accounts", icon: PieChart, requiredModule: "Accounts & Finance" },
   
   { name: "Team & Roles", href: "/dashboard/users", icon: Shield, adminOnly: true }, 
+  { name: "Recycle Bin", href: "/dashboard/recycle-bin", icon: Trash2, adminOnly: true }, 
 ];
 
 export default function Sidebar({ 

@@ -150,3 +150,37 @@ export async function updateInvoice(invoiceId: string, data: any) {
     return { error: error.message };
   }
 }
+
+// 6. Delete (Soft Delete) Invoice
+export async function deleteInvoice(invoiceId: string) {
+  try {
+    const session = await verifySession();
+    if (!session?.userId) throw new Error("Unauthorized");
+
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: { isArchived: true, deletedAt: new Date() }
+    });
+
+    revalidatePath('/dashboard/invoices');
+    revalidatePath('/dashboard/recycle-bin');
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+// 7. Restore Invoice
+export async function restoreInvoice(invoiceId: string) {
+  try {
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: { isArchived: false, deletedAt: null }
+    });
+    revalidatePath('/dashboard/invoices');
+    revalidatePath('/dashboard/recycle-bin');
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
