@@ -8,7 +8,7 @@ import { restoreInvoice } from '@/app/actions/invoice'
 import { restoreSupportTicket } from '@/app/actions/support'
 import { useRouter } from 'next/navigation'
 
-type ItemType = 'client' | 'job' | 'vehicle' | 'invoice' | 'support'
+export type ItemType = 'client' | 'job' | 'vehicle' | 'invoice' | 'support'
 
 interface Item {
   id: string
@@ -17,20 +17,28 @@ interface Item {
   date: Date | null
 }
 
-export default function RecycleBinClient({ data }: { data: Record<ItemType, Item[]> }) {
-  const [activeTab, setActiveTab] = useState<ItemType>('job')
+export interface DataType {
+  clients: Item[]
+  jobs: Item[]
+  vehicles: Item[]
+  invoices: Item[]
+  support: Item[]
+}
+
+export default function RecycleBinClient({ data }: { data: DataType }) {
+  const [activeTab, setActiveTab] = useState<keyof DataType>('jobs')
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const router = useRouter()
 
-  const tabs = [
-    { id: 'job', label: 'Job Tickets', count: data.jobs.length },
-    { id: 'client', label: 'Clients', count: data.clients.length },
-    { id: 'vehicle', label: 'Vehicles', count: data.vehicles.length },
-    { id: 'invoice', label: 'Invoices', count: data.invoices.length },
-    { id: 'support', label: 'Support', count: data.support.length },
+  const tabs: { id: keyof DataType, label: string, count: number }[] = [
+    { id: 'jobs', label: 'Job Tickets', count: data.jobs?.length || 0 },
+    { id: 'clients', label: 'Clients', count: data.clients?.length || 0 },
+    { id: 'vehicles', label: 'Vehicles', count: data.vehicles?.length || 0 },
+    { id: 'invoices', label: 'Invoices', count: data.invoices?.length || 0 },
+    { id: 'support', label: 'Support', count: data.support?.length || 0 },
   ]
 
-  const activeItems = data[activeTab]
+  const activeItems = data[activeTab] || []
 
   async function handleRestore(id: string, type: ItemType) {
     if (!confirm('Are you sure you want to restore this item?')) return
@@ -68,7 +76,7 @@ export default function RecycleBinClient({ data }: { data: Record<ItemType, Item
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as ItemType)}
+            onClick={() => setActiveTab(tab.id as keyof DataType)}
             className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
               activeTab === tab.id 
                 ? 'border-[#84c47c] text-[#84c47c]' 

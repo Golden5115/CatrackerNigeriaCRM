@@ -17,8 +17,7 @@ export async function getAccountsAnalytics() {
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
   // 1. PULL REVENUE PURELY FROM PAYMENTS
-  const paidJobs = await prisma.job.findMany({ 
-    where: { amountPaid: { gt: 0 } },
+  const paidJobs = await prisma.job.findMany({ where: { isArchived: false,  amountPaid: { gt: 0 } },
     include: { vehicle: { include: { client: true } } },
     orderBy: { updatedAt: 'desc' }
   })

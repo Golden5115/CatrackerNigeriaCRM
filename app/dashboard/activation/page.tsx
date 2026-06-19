@@ -6,8 +6,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function ActivationPage() {
   // Fetch jobs that are CONFIGURED but not yet Onboarded
-  const jobs = await prisma.job.findMany({
-    where: { 
+  const jobs = await prisma.job.findMany({ where: { isArchived: false,  
       status: 'CONFIGURED',
       onboarded: false 
     },

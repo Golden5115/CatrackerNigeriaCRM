@@ -11,8 +11,7 @@ export const dynamic = 'force-dynamic';
 // 1. THE DATA COMPONENT
 // ==========================================
 async function PaymentsList() {
-  const jobs = await prisma.job.findMany({
-    where: { 
+  const jobs = await prisma.job.findMany({ where: { isArchived: false,  
       paymentStatus: { not: 'PAID' },
       // 🛑 THE FIX: Strictly limit to jobs that are ACTIVE and ONBOARDED
       status: 'ACTIVE',

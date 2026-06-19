@@ -25,8 +25,7 @@ export default async function RevenuePage() {
 
   // 🟢 FIXED: We now fetch `installDate` alongside the payment data
   const [paidJobs, unpaidJobsCount] = await Promise.all([
-    prisma.job.findMany({ 
-      where: { amountPaid: { gt: 0 } }, 
+    prisma.job.findMany({ where: { isArchived: false,  amountPaid: { gt: 0 } }, 
       select: { amountPaid: true, updatedAt: true, paymentDate: true, installDate: true } 
     }),
     prisma.job.count({ 
