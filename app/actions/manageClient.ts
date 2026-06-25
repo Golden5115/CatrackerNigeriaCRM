@@ -32,7 +32,22 @@ export async function deleteClient(clientId: string) {
       }
     }
 
-    // 3. Archive the client (soft delete)
+    // 3. Cascade: Archive ALL jobs under this client
+    const allJobIds = vehicles.flatMap(v => v.jobs.map(j => j.id))
+    if (allJobIds.length > 0) {
+      await tx.job.updateMany({
+        where: { id: { in: allJobIds } },
+        data: { isArchived: true, deletedAt: new Date(), deviceId: null, simCardId: null }
+      })
+    }
+
+    // 4. Cascade: Archive ALL vehicles under this client
+    await tx.vehicle.updateMany({
+      where: { clientId },
+      data: { isArchived: true, deletedAt: new Date() }
+    })
+
+    // 5. Archive the client itself (soft delete)
     await tx.client.update({
       where: { id: clientId },
       data: { isArchived: true, deletedAt: new Date() }
@@ -43,6 +58,11 @@ export async function deleteClient(clientId: string) {
   revalidatePath('/dashboard/clients')
   revalidatePath('/dashboard/inventory')
   revalidatePath('/dashboard/recycle-bin')
+  revalidatePath('/dashboard/payments')
+  revalidatePath('/dashboard/tech')
+  revalidatePath('/dashboard/activation')
+  revalidatePath('/dashboard/vehicles')
+  revalidatePath('/dashboard')
 }
 
 // --- RESTORE CLIENT (UN-ARCHIVE) ---
@@ -137,22 +157,71 @@ export async function restoreJobTicket(jobId: string) {
 }
 
 // --- DELETE SINGLE VEHICLE ---
+// Also cascades archive to child jobs and releases their hardware
 export async function deleteVehicle(vehicleId: string) {
-  await prisma.vehicle.update({ 
-    where: { id: vehicleId },
-    data: { isArchived: true, deletedAt: new Date() }
-  });
-  revalidatePath('/dashboard/clients/[id]/edit'); 
-  revalidatePath('/dashboard/recycle-bin'); 
+  await prisma.$transaction(async (tx) => {
+    // 1. Find all jobs on this vehicle and release hardware
+    const jobs = await tx.job.findMany({
+      where: { vehicleId },
+      select: { id: true, deviceId: true, simCardId: true }
+    })
+
+    for (const job of jobs) {
+      if (job.deviceId) {
+        await tx.device.update({
+          where: { id: job.deviceId },
+          data: { status: 'IN_STOCK' }
+        })
+      }
+      if (job.simCardId) {
+        await tx.simCard.update({
+          where: { id: job.simCardId },
+          data: { status: 'IN_STOCK' }
+        })
+      }
+    }
+
+    // 2. Cascade: Archive all jobs under this vehicle
+    await tx.job.updateMany({
+      where: { vehicleId },
+      data: { isArchived: true, deletedAt: new Date(), deviceId: null, simCardId: null }
+    })
+
+    // 3. Archive the vehicle
+    await tx.vehicle.update({ 
+      where: { id: vehicleId },
+      data: { isArchived: true, deletedAt: new Date() }
+    })
+  })
+
+  revalidatePath('/dashboard/clients/[id]/edit')
+  revalidatePath('/dashboard/recycle-bin')
+  revalidatePath('/dashboard/leads')
+  revalidatePath('/dashboard/vehicles')
+  revalidatePath('/dashboard/payments')
+  revalidatePath('/dashboard/tech')
+  revalidatePath('/dashboard/activation')
+  revalidatePath('/dashboard')
 }
 
 // --- RESTORE SINGLE VEHICLE ---
 export async function restoreVehicle(vehicleId: string) {
-  await prisma.vehicle.update({ 
-    where: { id: vehicleId },
-    data: { isArchived: false, deletedAt: null }
+  await prisma.$transaction(async (tx) => {
+    // Restore the vehicle
+    await tx.vehicle.update({ 
+      where: { id: vehicleId },
+      data: { isArchived: false, deletedAt: null }
+    });
+    // Restore all jobs under this vehicle
+    await tx.job.updateMany({
+      where: { vehicleId },
+      data: { isArchived: false, deletedAt: null }
+    });
   });
-  revalidatePath('/dashboard/recycle-bin'); 
+  revalidatePath('/dashboard/recycle-bin');
+  revalidatePath('/dashboard/leads');
+  revalidatePath('/dashboard/vehicles');
+  revalidatePath('/dashboard');
 }
 
 // --- UPDATE CLIENT & VEHICLES ---

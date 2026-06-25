@@ -15,7 +15,12 @@ async function PaymentsList() {
       paymentStatus: { not: 'PAID' },
       // 🛑 THE FIX: Strictly limit to jobs that are ACTIVE and ONBOARDED
       status: 'ACTIVE',
-      onboarded: true
+      onboarded: true,
+      // 🟢 Defense-in-depth: Exclude archived parent records
+      vehicle: {
+        isArchived: false,
+        client: { isArchived: false }
+      }
     },
     include: {
       vehicle: { include: { client: true } }

@@ -14,7 +14,12 @@ async function VehiclesTable({ sort, query, page }: { sort: string, query: strin
   const pageSize = 40;
 
   const whereClause: any = {
-    status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE'] }
+    isArchived: false,
+    status: { in: ['PENDING_QC', 'CONFIGURED', 'ACTIVE'] },
+    vehicle: {
+      isArchived: false,
+      client: { isArchived: false }
+    }
   };
 
   if (query) {

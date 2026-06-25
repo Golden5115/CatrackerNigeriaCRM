@@ -9,7 +9,13 @@ export const dynamic = 'force-dynamic';
 // 1. THE DATA COMPONENT
 // ==========================================
 async function TechQueueList() {
-  const jobs = await prisma.job.findMany({ where: { isArchived: false,  status: 'PENDING_QC' },
+  const jobs = await prisma.job.findMany({ where: { isArchived: false,  status: 'PENDING_QC',
+      // 🟢 Defense-in-depth: Exclude archived parent records
+      vehicle: {
+        isArchived: false,
+        client: { isArchived: false }
+      }
+    },
     include: {
       vehicle: { include: { client: true } },
       device: true,   

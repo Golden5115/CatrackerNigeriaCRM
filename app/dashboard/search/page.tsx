@@ -1,8 +1,50 @@
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
-import { Search as SearchIcon, User, Car, Cpu, Smartphone, ArrowRight, Wrench, FileText } from "lucide-react"
+import { Search as SearchIcon, User, Car, Cpu, Smartphone, ArrowRight, Wrench, FileText, Briefcase, CreditCard, Server, CheckCircle, XCircle, TrendingUp, Archive } from "lucide-react"
 
 export const dynamic = 'force-dynamic'
+
+// Helper: Determine which module/status a job is currently in
+function getJobModuleBadge(job: any) {
+  if (job.isArchived) return { label: 'Archived', color: 'bg-gray-100 text-gray-600 border-gray-200' }
+  switch (job.status) {
+    case 'NEW_LEAD': return { label: 'Sales Pipeline', color: 'bg-blue-100 text-blue-700 border-blue-200' }
+    case 'SCHEDULED': return { label: 'Scheduled', color: 'bg-purple-100 text-purple-700 border-purple-200' }
+    case 'IN_PROGRESS': return { label: 'In Progress', color: 'bg-orange-100 text-orange-700 border-orange-200' }
+    case 'PENDING_QC': return { label: 'Tech Queue', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' }
+    case 'CONFIGURED': return { label: job.onboarded ? 'Client Database' : 'Onboarding', color: job.onboarded ? 'bg-green-100 text-green-700 border-green-200' : 'bg-indigo-100 text-indigo-700 border-indigo-200' }
+    case 'ACTIVE': return { label: 'Active Client', color: 'bg-green-100 text-green-700 border-green-200' }
+    case 'LEAD_LOST': return { label: 'Lost Lead', color: 'bg-gray-100 text-gray-600 border-gray-200' }
+    default: return { label: job.status.replace('_', ' '), color: 'bg-gray-100 text-gray-600 border-gray-200' }
+  }
+}
+
+// Helper: Get the best module status for a client based on their jobs
+function getClientModuleBadges(client: any) {
+  const badges: { label: string, color: string }[] = []
+  const statuses = new Set<string>()
+  
+  for (const vehicle of client.vehicles) {
+    for (const job of vehicle.jobs) {
+      if (!job.isArchived) {
+        statuses.add(job.status)
+        if (job.status === 'ACTIVE' && job.paymentStatus !== 'PAID') {
+          badges.push({ label: 'Payment Due', color: 'bg-red-100 text-red-700 border-red-200' })
+        }
+      }
+    }
+  }
+
+  if (statuses.has('ACTIVE')) badges.unshift({ label: 'Active Client', color: 'bg-green-100 text-green-700 border-green-200' })
+  else if (statuses.has('CONFIGURED')) badges.unshift({ label: 'Onboarding', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' })
+  else if (statuses.has('PENDING_QC')) badges.unshift({ label: 'Tech Queue', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' })
+  else if (statuses.has('IN_PROGRESS')) badges.unshift({ label: 'In Progress', color: 'bg-orange-100 text-orange-700 border-orange-200' })
+  else if (statuses.has('SCHEDULED')) badges.unshift({ label: 'Scheduled', color: 'bg-purple-100 text-purple-700 border-purple-200' })
+  else if (statuses.has('NEW_LEAD')) badges.unshift({ label: 'Sales Pipeline', color: 'bg-blue-100 text-blue-700 border-blue-200' })
+  else if (statuses.has('LEAD_LOST')) badges.unshift({ label: 'Lost Lead', color: 'bg-gray-100 text-gray-600 border-gray-200' })
+  
+  return badges.length > 0 ? badges : [{ label: 'Client Database', color: 'bg-gray-100 text-gray-600 border-gray-200' }]
+}
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const params = await searchParams;
@@ -18,10 +60,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  // 🟢 NEW: Broadened search fields to capture address, year, invoices, and support
+  // 🟢 FIXED: All queries now exclude archived records
   const [clients, vehicles, devices, simCards, supportTickets, invoices] = await Promise.all([
     prisma.client.findMany({
       where: {
+        isArchived: false,
         OR: [
           { fullName: { contains: q, mode: 'insensitive' } },
           { phoneNumber: { contains: q } },
@@ -30,17 +73,29 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           { state: { contains: q, mode: 'insensitive' } }
         ]
       },
-      include: { vehicles: true }
+      include: { 
+        vehicles: { 
+          where: { isArchived: false },
+          include: { 
+            jobs: { where: { isArchived: false }, select: { status: true, paymentStatus: true, onboarded: true, isArchived: true } } 
+          } 
+        } 
+      }
     }),
     prisma.vehicle.findMany({
       where: {
+        isArchived: false,
+        client: { isArchived: false },
         OR: [
           { plateNumber: { contains: q, mode: 'insensitive' } },
           { name: { contains: q, mode: 'insensitive' } },
           { year: { contains: q } }
         ]
       },
-      include: { client: true }
+      include: { 
+        client: true,
+        jobs: { where: { isArchived: false }, select: { status: true, paymentStatus: true, onboarded: true, isArchived: true } }
+      }
     }),
     prisma.device.findMany({
       where: { imei: { contains: q } },
@@ -52,6 +107,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     }),
     prisma.support.findMany({
       where: {
+        isArchived: false,
         OR: [
           { clientName: { contains: q, mode: 'insensitive' } },
           { phoneNumber: { contains: q } },
@@ -62,6 +118,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     }),
     prisma.invoice.findMany({
       where: {
+        isArchived: false,
         OR: [
           { invoiceNumber: { contains: q, mode: 'insensitive' } },
           { clientName: { contains: q, mode: 'insensitive' } }
@@ -78,7 +135,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <div className="border-b pb-6">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
           <SearchIcon className="text-blue-500" size={28} />
-          Search Results for "{q}"
+          Search Results for &quot;{q}&quot;
         </h2>
         <p className="text-gray-500 mt-1">Found {totalResults} matching records in your database.</p>
       </div>
@@ -97,18 +154,26 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
              <User size={18} className="text-[#84c47c]" /> Matching Clients
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {clients.map(client => (
-              <Link href={`/dashboard/clients/${client.id}`} key={client.id} className="block bg-white p-4 rounded-xl border hover:border-[#84c47c] hover:shadow-md transition group">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-bold text-gray-900 text-lg group-hover:text-[#2d4a2a] transition">{client.fullName}</p>
-                    <p className="text-sm text-gray-500 mt-1">{client.phoneNumber}</p>
-                    <p className="text-xs text-gray-400 mt-2 bg-gray-100 w-fit px-2 py-1 rounded">{client.vehicles.length} Vehicle(s)</p>
+            {clients.map(client => {
+              const badges = getClientModuleBadges(client)
+              return (
+                <Link href={`/dashboard/clients/${client.id}`} key={client.id} className="block bg-white p-4 rounded-xl border hover:border-[#84c47c] hover:shadow-md transition group">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-gray-900 text-lg group-hover:text-[#2d4a2a] transition">{client.fullName}</p>
+                      <p className="text-sm text-gray-500 mt-1">{client.phoneNumber}</p>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        <span className="text-xs bg-gray-100 text-gray-600 w-fit px-2 py-1 rounded font-medium">{client.vehicles.length} Vehicle(s)</span>
+                        {badges.map((badge, i) => (
+                          <span key={i} className={`text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border ${badge.color}`}>{badge.label}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <ArrowRight size={18} className="text-gray-300 group-hover:text-[#84c47c] transition" />
                   </div>
-                  <ArrowRight size={18} className="text-gray-300 group-hover:text-[#84c47c] transition" />
-                </div>
-              </Link>
-            ))}
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}
@@ -120,20 +185,30 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
              <Car size={18} className="text-blue-500" /> Matching Vehicles
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {vehicles.map(vehicle => (
-              <Link href={`/dashboard/clients/${vehicle.clientId}`} key={vehicle.id} className="block bg-white p-4 rounded-xl border hover:border-blue-400 hover:shadow-md transition group">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-gray-900">{vehicle.name} <span className="font-normal text-gray-500 text-sm">({vehicle.year || 'N/A'})</span></p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="font-mono text-xs bg-gray-100 border px-2 py-1 rounded font-bold">{vehicle.plateNumber || 'NO PLATE'}</span>
-                      <span className="text-xs text-gray-500">Owned by: {vehicle.client.fullName}</span>
+            {vehicles.map(vehicle => {
+              const jobBadges = vehicle.jobs.map((job: any) => getJobModuleBadge(job))
+              return (
+                <Link href={`/dashboard/clients/${vehicle.clientId}`} key={vehicle.id} className="block bg-white p-4 rounded-xl border hover:border-blue-400 hover:shadow-md transition group">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-gray-900">{vehicle.name} <span className="font-normal text-gray-500 text-sm">({vehicle.year || 'N/A'})</span></p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="font-mono text-xs bg-gray-100 border px-2 py-1 rounded font-bold">{vehicle.plateNumber || 'NO PLATE'}</span>
+                        <span className="text-xs text-gray-500">Owned by: {vehicle.client.fullName}</span>
+                      </div>
+                      {jobBadges.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {jobBadges.map((badge: any, i: number) => (
+                            <span key={i} className={`text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border ${badge.color}`}>{badge.label}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
+                    <ArrowRight size={18} className="text-gray-300 group-hover:text-blue-500 transition" />
                   </div>
-                  <ArrowRight size={18} className="text-gray-300 group-hover:text-blue-500 transition" />
-                </div>
-              </Link>
-            ))}
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}
@@ -151,6 +226,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                   <div>
                     <p className="font-bold text-gray-900">{ticket.clientName}</p>
                     <p className="text-sm text-gray-500 mt-1 truncate">{ticket.issue}</p>
+                    <div className="flex gap-1.5 mt-2">
+                      {ticket.status === 'RESOLVED' ? (
+                        <span className="text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border bg-green-100 text-green-700 border-green-200">Resolved</span>
+                      ) : (
+                        <span className="text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border bg-orange-100 text-orange-700 border-orange-200">Pending</span>
+                      )}
+                    </div>
                   </div>
                   <ArrowRight size={18} className="text-gray-300 group-hover:text-orange-500 transition" />
                 </div>
@@ -173,6 +255,15 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                   <div>
                     <p className="font-bold text-gray-900">{invoice.invoiceNumber}</p>
                     <p className="text-sm text-gray-500 mt-1">Billed to: {invoice.clientName}</p>
+                    <div className="flex gap-1.5 mt-2">
+                      {invoice.status === 'PAID' ? (
+                        <span className="text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border bg-green-100 text-green-700 border-green-200">Paid</span>
+                      ) : invoice.status === 'CANCELLED' ? (
+                        <span className="text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border bg-gray-100 text-gray-600 border-gray-200">Cancelled</span>
+                      ) : (
+                        <span className="text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border bg-red-100 text-red-700 border-red-200">Unpaid</span>
+                      )}
+                    </div>
                   </div>
                   <ArrowRight size={18} className="text-gray-300 group-hover:text-yellow-500 transition" />
                 </div>

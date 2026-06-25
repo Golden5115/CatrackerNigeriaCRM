@@ -8,7 +8,12 @@ export default async function ActivationPage() {
   // Fetch jobs that are CONFIGURED but not yet Onboarded
   const jobs = await prisma.job.findMany({ where: { isArchived: false,  
       status: 'CONFIGURED',
-      onboarded: false 
+      onboarded: false,
+      // 🟢 Defense-in-depth: Exclude archived parent records
+      vehicle: {
+        isArchived: false,
+        client: { isArchived: false }
+      }
     },
     include: {
       vehicle: { include: { client: true } },

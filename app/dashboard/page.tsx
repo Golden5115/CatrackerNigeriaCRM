@@ -50,15 +50,15 @@ export default async function DashboardOverview({
     totalLeads, convertedLeads, pendingSupport,
     completedSupport, pendingPayments, distinctClients
   ] = await Promise.all([
-    prisma.job.count({ where: { installDate: { gte: startOfThisMonth }, status: { in: completedStatuses } } }),
-    prisma.job.count({ where: { installDate: { gte: startOfThisWeek }, status: { in: completedStatuses } } }),
-    prisma.job.count({ where: { installDate: { gte: startOfLastWeek, lte: endOfLastWeek }, status: { in: completedStatuses } } }),
-    prisma.job.count({ where: { jobType: 'NEW_INSTALL' } }),
-    prisma.job.count({ where: { jobType: 'NEW_INSTALL', onboarded: true } }), 
-    prisma.support.count({ where: { status: 'PENDING' } }), // 👈 FIXED: Points strictly to the new Support model
-    prisma.job.count({ where: { jobType: { not: 'NEW_INSTALL' }, status: { in: ['CONFIGURED', 'ACTIVE'] } } }),
-    prisma.job.count({ where: { status: 'ACTIVE', paymentStatus: { not: 'PAID' } } }),
-    prisma.client.findMany({ select: { leadSource: true }, distinct: ["leadSource"] }) // 👈 Gets sources for the dropdown
+    prisma.job.count({ where: { isArchived: false, installDate: { gte: startOfThisMonth }, status: { in: completedStatuses } } }),
+    prisma.job.count({ where: { isArchived: false, installDate: { gte: startOfThisWeek }, status: { in: completedStatuses } } }),
+    prisma.job.count({ where: { isArchived: false, installDate: { gte: startOfLastWeek, lte: endOfLastWeek }, status: { in: completedStatuses } } }),
+    prisma.job.count({ where: { isArchived: false, jobType: 'NEW_INSTALL' } }),
+    prisma.job.count({ where: { isArchived: false, jobType: 'NEW_INSTALL', onboarded: true } }), 
+    prisma.support.count({ where: { isArchived: false, status: 'PENDING' } }),
+    prisma.job.count({ where: { isArchived: false, jobType: { not: 'NEW_INSTALL' }, status: { in: ['CONFIGURED', 'ACTIVE'] } } }),
+    prisma.job.count({ where: { isArchived: false, status: 'ACTIVE', paymentStatus: { not: 'PAID' } } }),
+    prisma.client.findMany({ where: { isArchived: false }, select: { leadSource: true }, distinct: ["leadSource"] })
   ]);
 
   // Map and clean up lead sources for the filter dropdown
@@ -70,12 +70,13 @@ export default async function DashboardOverview({
   const [unusedSims, unusedDevices, inOnboarding, inTech] = await Promise.all([
     prisma.simCard.count({ where: { status: 'IN_STOCK' } }),
     prisma.device.count({ where: { status: 'IN_STOCK' } }),
-    prisma.job.count({ where: { status: 'CONFIGURED', onboarded: false } }),
-    prisma.job.count({ where: { status: 'PENDING_QC' } }),
+    prisma.job.count({ where: { isArchived: false, status: 'CONFIGURED', onboarded: false } }),
+    prisma.job.count({ where: { isArchived: false, status: 'PENDING_QC' } }),
   ]);
 
   // 🟢 INTEGRATION 2: Apply the Lead Source filter to the query
   const installWhere: any = {
+    isArchived: false,
     installDate: { gte: filterStartDate, lte: filterEndDate },
     status: { in: completedStatuses }
   };
