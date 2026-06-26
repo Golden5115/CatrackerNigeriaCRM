@@ -10,7 +10,8 @@ import {
   Car,
   PieChart, // 🟢 NEW: Imported a cool icon for the Accounts module
   Trash2,
-  Inbox
+  Inbox,
+  PhoneCall
 } from "lucide-react";
 import Logo from "./Logo";
 import SearchInput from "./SearchInput";
@@ -23,6 +24,7 @@ const allMenuItems = [
   { name: "Sales Pipeline", href: "/dashboard/leads", icon: Users, requiredModule: "Sales Pipeline" },
   { name: "Lead Inbox", href: "/dashboard/leads/inbox", icon: Inbox, requiredModule: "Sales Pipeline" },
   { name: "Support Tickets", href: "/dashboard/support", icon: Wrench, requiredModule: "Support Tickets" },
+  { name: "Post Service (PSF)", href: "/dashboard/psf", icon: PhoneCall, requiredModule: "PSF Calls" },
   { name: "Inventory", href: "/dashboard/inventory", icon: Package, requiredModule: "Inventory" },
   { name: "Tech Support", href: "/dashboard/tech", icon: Server, requiredModule: "Tech Support" },
   { name: "Client Onboarding", href: "/dashboard/activation", icon: Smartphone, requiredModule: "Activation" },
