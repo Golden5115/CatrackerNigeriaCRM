@@ -22,7 +22,7 @@ const allMenuItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard, requiredModule: null }, 
   { name: "My Profile", href: "/dashboard/profile", icon: User, requiredModule: null },
   { name: "Sales Pipeline", href: "/dashboard/leads", icon: Users, requiredModule: "Sales Pipeline" },
-  { name: "Lead Inbox", href: "/dashboard/leads/inbox", icon: Inbox, requiredModule: "Sales Pipeline" },
+  { name: "Lead Inbox", href: "/dashboard/leads/inbox", icon: Inbox, requiredModule: "Lead Inbox" },
   { name: "Support Tickets", href: "/dashboard/support", icon: Wrench, requiredModule: "Support Tickets" },
   { name: "Post Service (PSF)", href: "/dashboard/psf", icon: PhoneCall, requiredModule: "PSF Calls" },
   { name: "Inventory", href: "/dashboard/inventory", icon: Package, requiredModule: "Inventory" },
@@ -32,7 +32,7 @@ const allMenuItems = [
   { name: "Fleet & Vehicles", href: "/dashboard/vehicles", icon: Car, requiredModule: "Fleet & Vehicles" },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, requiredModule: "Payments" },
   { name: "Invoices", href: "/dashboard/invoices", icon: FileText, requiredModule: "Invoices" },
-  { name: "Revenue Analysis", href: "/dashboard/revenue", icon: TrendingUp, adminOnly: true },
+  { name: "Revenue Analysis", href: "/dashboard/revenue", icon: TrendingUp, requiredModule: "Revenue Analytics" },
   
   // 🟢 FIXED: Changed `adminOnly: true` to `requiredModule: "Accounts & Finance"`
   { name: "Accounts & Finance", href: "/dashboard/accounts", icon: PieChart, requiredModule: "Accounts & Finance" },

@@ -5,12 +5,19 @@ import { Shield, Mail, Phone, MapPin, Briefcase, FileText, CheckCircle, Lock } f
 export const dynamic = 'force-dynamic'
 
 const AVAILABLE_MODULES = [
-  { id: '/dashboard/leads', label: 'Sales Pipeline (Leads)' },
-  { id: '/dashboard/tech', label: 'Tech Support (QC)' },
-  { id: '/dashboard/activation', label: 'Client Onboarding' },
-  { id: '/dashboard/inventory', label: 'Inventory Management' },
-  { id: '/dashboard/payments', label: 'Payments & Financials' },
-  { id: '/dashboard/clients', label: 'Client Database' }
+  { id: 'Sales Pipeline', label: 'Sales Pipeline (Leads)' },
+  { id: 'Lead Inbox', label: 'Lead Inbox' },
+  { id: 'Support Tickets', label: 'Support Tickets' },
+  { id: 'PSF Calls', label: 'Post Service (PSF)' },
+  { id: 'Inventory', label: 'Inventory Management' },
+  { id: 'Tech Support', label: 'Tech Support (QC)' },
+  { id: 'Activation', label: 'Client Onboarding' },
+  { id: 'Client Database', label: 'Client Database' },
+  { id: 'Fleet & Vehicles', label: 'Fleet & Vehicles' },
+  { id: 'Payments', label: 'Payments & Financials' },
+  { id: 'Invoices', label: 'Invoices' },
+  { id: 'Accounts & Finance', label: 'Accounts & Finance' },
+  { id: 'Revenue Analytics', label: 'Revenue Analysis' }
 ]
 
 export default async function MyProfilePage() {

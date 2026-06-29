@@ -8,7 +8,9 @@ import { createUser } from "@/app/actions/users"
 const AVAILABLE_MODULES = [
   { id: "Dashboard", label: "Dashboard" },
   { id: "Sales Pipeline", label: "Sales Pipeline" },
+  { id: "Lead Inbox", label: "Lead Inbox" },
   { id: "Support Tickets", label: "Support Tickets" }, 
+  { id: "PSF Calls", label: "Post Service (PSF)" },
   { id: "Client Database", label: "Client Database" },
   { id: "Fleet & Vehicles", label: "Fleet & Vehicles" },
   { id: "Payments", label: "Payments" },
