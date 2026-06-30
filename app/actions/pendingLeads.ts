@@ -13,12 +13,12 @@ function normalizePhone(raw: string): string {
   return digits
 }
 
-// Helper for parsing extra vehicles "Make (Year); Make (Year)"
+// Helper for parsing extra vehicles "Make (Year); Make (Year)" or comma/newline separated
 function parseExtraVehicles(vehiclesStr: string): { name: string; year: string }[] {
   if (!vehiclesStr || !vehiclesStr.trim()) return []
 
   return vehiclesStr
-    .split(';')
+    .split(/[,;\n]+/)
     .map(v => v.trim())
     .filter(Boolean)
     .map(v => {
@@ -26,6 +26,50 @@ function parseExtraVehicles(vehiclesStr: string): { name: string; year: string }
       if (match) return { name: match[1].trim(), year: match[2] }
       return { name: v, year: '' }
     })
+}
+
+// Helper to extract extra vehicles from various payload structures (string, array, or dynamic keys like extraCar_1)
+function extractExtraVehiclesFromPayload(payload: any): { name: string; year: string }[] {
+  const extras: { name: string; year: string }[] = []
+  if (!payload || typeof payload !== 'object') return extras
+
+  // 1. If extraVehicles is a string or array
+  const extraStr = payload.extraVehicles || payload.vehicles
+  if (typeof extraStr === 'string' && extraStr.trim()) {
+    extras.push(...parseExtraVehicles(extraStr))
+  } 
+  else if (Array.isArray(extraStr)) {
+    extraStr.forEach((item: any) => {
+      if (typeof item === 'string') {
+        extras.push(...parseExtraVehicles(item))
+      } else if (typeof item === 'object' && item !== null) {
+        const name = item.car || item.vehicleName || item.name || item.make || ''
+        const year = item.year || item.vehicleYear || ''
+        if (name) extras.push({ name: String(name).trim(), year: String(year).trim() })
+      }
+    })
+  }
+
+  // 2. Scan for dynamic numbered fields like extraCar_1, extraYear_1
+  const keys = Object.keys(payload)
+  const carKeys = keys.filter(k => /^(extraCar|extraVehicle|car|vehicle)_?\d+$/i.test(k))
+  
+  for (const carKey of carKeys) {
+    const match = carKey.match(/\d+$/)
+    if (match) {
+      const index = match[0]
+      const name = payload[carKey]
+      
+      const yearKey = keys.find(k => new RegExp(`^(extraYear|year)_?${index}$`, 'i').test(k))
+      const year = yearKey ? payload[yearKey] : ''
+      
+      if (name && typeof name === 'string') {
+        extras.push({ name: name.trim(), year: String(year).trim() })
+      }
+    }
+  }
+
+  return extras
 }
 
 export async function approveLead(id: string) {
@@ -50,7 +94,8 @@ export async function approveLead(id: string) {
   
   const car = payload.vehicleName || payload.car || null
   const year = payload.vehicleYear || payload.year || null
-  const extraVehiclesStr = payload.extraVehicles || payload.vehicles || ''
+  
+  const extras = extractExtraVehiclesFromPayload(payload)
   
   const proxy = payload.proxy || 'No'
   const p_name = payload.p_name || payload.proxyName || ''
@@ -117,7 +162,7 @@ export async function approveLead(id: string) {
           onsiteContact: onsiteContact || null,
         },
       })
-    } else if (!car && !extraVehiclesStr) {
+    } else if (!car && extras.length === 0) {
         // If no car was specified at all, still create a dummy vehicle so they show up in the pipeline
         const vehicle = await tx.vehicle.create({
             data: {
@@ -137,8 +182,7 @@ export async function approveLead(id: string) {
     }
 
     // 3. Extra Vehicles
-    if (extraVehiclesStr) {
-      const extras = parseExtraVehicles(extraVehiclesStr)
+    if (extras.length > 0) {
       for (const extra of extras) {
         const extraVehicle = await tx.vehicle.create({
           data: {

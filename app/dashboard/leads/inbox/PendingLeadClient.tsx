@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { approveLead, rejectLead } from '@/app/actions/pendingLeads'
-import { CheckCircle2, XCircle, Loader2, Phone, User, Car, Clock, MapPin, MessageSquare } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Phone, User, Car, Clock, MapPin, MessageSquare, Smartphone, Map, Users } from 'lucide-react'
 
 export default function PendingLeadClient({ lead }: { lead: any }) {
   const [isApproving, setIsApproving] = useState(false)
@@ -34,8 +34,12 @@ export default function PendingLeadClient({ lead }: { lead: any }) {
   // Extract common fields for display
   const name = payload.fullName || payload.owner || payload.name || 'Unknown'
   const phone = payload.phoneNumber || payload.phone || 'No phone'
+  const whatsapp = payload.whatsapp || ''
   const car = payload.vehicleName || payload.car || 'No vehicle specified'
+  const year = payload.vehicleYear || payload.year || ''
   const address = payload.address || 'No address provided'
+  const state = payload.state || ''
+  const proxy = payload.proxy || ''
   const notes = payload.remarks || payload.notes || payload.message || ''
 
   return (
@@ -53,6 +57,18 @@ export default function PendingLeadClient({ lead }: { lead: any }) {
                 <Phone size={16} className="text-gray-400" />
                 <span>{phone}</span>
               </div>
+              {whatsapp && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Smartphone size={16} className="text-gray-400" />
+                  <span>WA: {whatsapp}</span>
+                </div>
+              )}
+              {state && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Map size={16} className="text-gray-400" />
+                  <span>State: {state}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-gray-600">
                 <MapPin size={16} className="text-gray-400" />
                 <span className="truncate max-w-[250px]">{address}</span>
@@ -62,8 +78,16 @@ export default function PendingLeadClient({ lead }: { lead: any }) {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-gray-600">
                 <Car size={16} className="text-gray-400" />
-                <span className="font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{car}</span>
+                <span className="font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                  {car} {year && `(${year})`}
+                </span>
               </div>
+              {proxy && proxy !== 'No' && proxy !== 'false' && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Users size={16} className="text-gray-400" />
+                  <span>Proxy on-site</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <Clock size={16} className="text-gray-400" />
                 <span>Submitted: {new Date(lead.createdAt).toLocaleString()}</span>
