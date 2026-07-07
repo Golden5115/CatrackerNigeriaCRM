@@ -108,7 +108,10 @@ export default async function DashboardOverview({
       isArchived: false,
       installDate: { gte: filterStartDate, lte: filterEndDate },
       status: { in: completedStatuses },
-      installerName: { not: null, not: "" }
+      installerName: { not: null },
+      AND: [
+        { installerName: { not: "" } }
+      ]
     },
     _count: {
       _all: true
