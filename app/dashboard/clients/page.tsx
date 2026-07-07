@@ -3,7 +3,7 @@ import Link from "next/link";
 import React, { Suspense } from "react";
 import { 
   Car, AlertCircle, CheckCircle, MailWarning, 
-  Wrench, Pencil, Calendar, XCircle, Loader2 // 👈 Added Calendar icon
+  Wrench, Pencil, Calendar, XCircle, Loader2, Download
 } from "lucide-react";
 import { verifySession } from "@/lib/session"
 import DeleteClientButton from "@/components/DeleteClientButton";
@@ -224,6 +224,9 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         </div>
         
         <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
+          <a href="/api/export/clients" download="clients_export.csv" className="w-full sm:w-auto justify-center bg-white text-gray-700 border border-gray-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 transition shadow-sm">
+            <Download size={14} className="text-blue-600" /> Export to Excel
+          </a>
           {isAdmin && (
             <ImportCSVButton />
           )}

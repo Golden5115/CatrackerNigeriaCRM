@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import Link from "next/link";
 import React, { Suspense } from "react";
-import { Car, Hash, User, Cpu, Loader2, CheckCircle, Wrench, Smartphone } from "lucide-react";
+import { Car, Hash, User, Cpu, Loader2, CheckCircle, Wrench, Smartphone, Download } from "lucide-react";
 import { verifySession } from "@/lib/session"
 import LocalSearchInput from "@/components/LocalSearchInput";
 import SortControl from "@/components/SortControl"; 
@@ -130,6 +130,11 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
         <div>
            <h2 className="text-2xl font-bold text-gray-800">Fleet & Jobs Database</h2>
            <p className="text-sm text-gray-500">A flat database of every active vehicle, its assigned hardware, and job status.</p>
+        </div>
+        <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
+          <a href="/api/export/vehicles" download="vehicles_export.csv" className="w-full sm:w-auto justify-center bg-white text-gray-700 border border-gray-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 transition shadow-sm">
+            <Download size={14} className="text-blue-600" /> Export to Excel
+          </a>
         </div>
       </div>
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-gray-100">

@@ -140,6 +140,8 @@ export default function EditClientForm({ client }: { client: ClientData }) {
                 <option value="WhatsApp">WhatsApp</option>
                 <option value="Referral">Referral</option>
                 <option value="Website">Website</option>
+                <option value="B2B">B2B</option>
+                <option value="Mr michael">Mr michael</option>
                 <option value="Other">Other</option>
               </select>
             </div>

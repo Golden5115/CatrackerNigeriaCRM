@@ -35,6 +35,7 @@ export default async function DashboardOverview({
   const filterMonth = params?.month ? parseInt(params.month as string) : now.getMonth() + 1;
   const filterYear = params?.year ? parseInt(params.year as string) : now.getFullYear();
   const filterLeadSource = params?.leadSource as string | undefined;
+  const filterInstaller = params?.installer as string | undefined;
 
   const filterStartDate = new Date(filterYear, filterMonth - 1, 1);
   const filterEndDate = new Date(filterYear, filterMonth, 0, 23, 59, 59, 999);
@@ -48,7 +49,7 @@ export default async function DashboardOverview({
   const [
     installsThisMonth, installsThisWeek, installsLastWeek,
     totalLeads, convertedLeads, pendingSupport,
-    completedSupport, pendingPayments, distinctClients
+    completedSupport, pendingPayments, distinctClients, distinctInstallersRaw
   ] = await Promise.all([
     prisma.job.count({ where: { isArchived: false, installDate: { gte: startOfThisMonth }, status: { in: completedStatuses } } }),
     prisma.job.count({ where: { isArchived: false, installDate: { gte: startOfThisWeek }, status: { in: completedStatuses } } }),
@@ -58,13 +59,22 @@ export default async function DashboardOverview({
     prisma.support.count({ where: { isArchived: false, status: 'PENDING' } }),
     prisma.job.count({ where: { isArchived: false, jobType: { not: 'NEW_INSTALL' }, status: { in: ['CONFIGURED', 'ACTIVE'] } } }),
     prisma.job.count({ where: { isArchived: false, status: 'ACTIVE', paymentStatus: { not: 'PAID' } } }),
-    prisma.client.findMany({ where: { isArchived: false }, select: { leadSource: true }, distinct: ["leadSource"] })
+    prisma.client.findMany({ where: { isArchived: false }, select: { leadSource: true }, distinct: ["leadSource"] }),
+    prisma.job.findMany({ where: { isArchived: false, installerName: { not: null } }, select: { installerName: true }, distinct: ["installerName"] })
   ]);
 
-  // Map and clean up lead sources for the filter dropdown
-  const leadSources = distinctClients
+  // Map and clean up lead sources and installers for the filter dropdowns
+  const dbLeadSources = distinctClients
     .map((c) => c.leadSource)
     .filter((source): source is string => Boolean(source));
+    
+  // Ensure all standard options are always available in the filter
+  const standardLeadSources = ["Walk-in", "Instagram", "Facebook", "TikTok", "WhatsApp", "Referral", "Website", "B2B", "Mr michael", "Other"];
+  const leadSources = Array.from(new Set([...standardLeadSources, ...dbLeadSources]));
+    
+  const installerNames = distinctInstallersRaw
+    .map((job) => job.installerName)
+    .filter((name): name is string => Boolean(name));
 
   // Inventory and Queues batch
   const [unusedSims, unusedDevices, inOnboarding, inTech] = await Promise.all([
@@ -74,7 +84,7 @@ export default async function DashboardOverview({
     prisma.job.count({ where: { isArchived: false, status: 'PENDING_QC' } }),
   ]);
 
-  // 🟢 INTEGRATION 2: Apply the Lead Source filter to the query
+  // 🟢 INTEGRATION 2: Apply the Lead Source and Installer filters to the query
   const installWhere: any = {
     isArchived: false,
     installDate: { gte: filterStartDate, lte: filterEndDate },
@@ -86,6 +96,29 @@ export default async function DashboardOverview({
       client: { leadSource: filterLeadSource }
     };
   }
+
+  if (filterInstaller && filterInstaller !== "ALL") {
+    installWhere.installerName = filterInstaller;
+  }
+
+  // Installer GroupBy Stats
+  const installerStats = await prisma.job.groupBy({
+    by: ['installerName'],
+    where: {
+      isArchived: false,
+      installDate: { gte: filterStartDate, lte: filterEndDate },
+      status: { in: completedStatuses },
+      installerName: { not: null, not: "" }
+    },
+    _count: {
+      _all: true
+    },
+    orderBy: {
+      _count: {
+        installerName: 'desc'
+      }
+    }
+  });
 
   const filteredInstallsList = await prisma.job.findMany({
     where: installWhere,
@@ -268,6 +301,40 @@ export default async function DashboardOverview({
       </div>
 
       {/* ============================== */}
+      {/* ROW 4: INSTALLER PERFORMANCE   */}
+      {/* ============================== */}
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mt-8">
+        <details className="group marker:content-['']">
+          <summary className="flex items-center justify-between cursor-pointer list-none">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span> Top Installers ({displayFilterName})
+            </h3>
+            <div className="text-gray-400 group-open:rotate-180 transition-transform duration-200">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+          </summary>
+          
+          <div className="mt-6 pt-6 border-t border-gray-50">
+            {installerStats.length === 0 ? (
+              <p className="text-sm text-gray-500 font-medium text-center py-4">No completed installations found for this period.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {installerStats.map((stat, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 transition hover:bg-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white p-2 rounded-xl shadow-sm"><Wrench size={16} className="text-green-600"/></div>
+                      <span className="text-sm font-bold text-gray-800">{stat.installerName}</span>
+                    </div>
+                    <span className="text-xl font-black text-green-700">{stat._count._all}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
+      </div>
+
+      {/* ============================== */}
       {/* FILTERABLE INSTALLATIONS LIST  */}
       {/* ============================== */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mt-8">
@@ -280,12 +347,23 @@ export default async function DashboardOverview({
             </div>
             
             <div className="flex flex-col sm:flex-row items-center gap-3">
-               {/* 🟢 INTEGRATION 3: New Lead Source Filter placed right next to your existing OverviewFilter */}
+               {/* 🟢 INTEGRATION 3: New Lead Source & Installer Filters */}
                <form method="GET" className="flex items-center gap-2">
                  {/* Preserve month and year if they exist in the URL */}
                  {params?.month && <input type="hidden" name="month" value={params.month as string} />}
                  {params?.year && <input type="hidden" name="year" value={params.year as string} />}
                  
+                 <select 
+                   name="installer" 
+                   defaultValue={filterInstaller || "ALL"}
+                   className="bg-white border border-gray-200 text-gray-700 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:border-green-500 shadow-sm cursor-pointer"
+                 >
+                   <option value="ALL">All Installers</option>
+                   {installerNames.map(name => (
+                     <option key={name} value={name}>{name}</option>
+                   ))}
+                 </select>
+
                  <select 
                    name="leadSource" 
                    defaultValue={filterLeadSource || "ALL"}
@@ -313,6 +391,7 @@ export default async function DashboardOverview({
                  <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Install Date</th>
                  <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Vehicle</th>
                  <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Client</th>
+                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Installer</th>
                  <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">IMEI / Tracker</th>
                </tr>
              </thead>
@@ -338,6 +417,12 @@ export default async function DashboardOverview({
                          Src: {job.vehicle.client.leadSource}
                        </div>
                      )}
+                   </td>
+                   <td className="px-6 py-4">
+                     <div className="font-bold text-xs text-gray-700 flex items-center gap-1.5 bg-gray-50 w-fit px-3 py-1.5 rounded-lg border border-gray-200">
+                       <Wrench size={12} className="text-gray-400" />
+                       {job.installerName || 'Unassigned'}
+                     </div>
                    </td>
                    <td className="px-6 py-4 text-right">
                      <div className="text-xs font-mono font-bold text-gray-700 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100 inline-block">
