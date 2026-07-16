@@ -31,7 +31,7 @@ export default async function PsfPage({ searchParams }: { searchParams: Promise<
   let expiringJobs: any[] = [];
   let expiredJobs: any[] = [];
   
-  let metrics = {
+  const metrics = {
     total: 0,
     pending: 0,
     called: 0,
