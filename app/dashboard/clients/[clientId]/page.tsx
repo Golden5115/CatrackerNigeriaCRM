@@ -6,6 +6,7 @@ import {
   MapPin, Edit, AlertCircle
 } from "lucide-react";
 import AssignJobHardwareModal from "@/components/AssignJobHardwareModal"; // 🟢 FIXED: Using the Smart Link Modal
+import { VehicleStatusBadge } from "@/components/VehicleStatusBadge";
 
 export default async function ClientDetailsPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
@@ -92,7 +93,12 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
                     {job ? (
                       <>
                         <div className="space-y-3">
-                          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Technical Configuration</h4>
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Technical Configuration</h4>
+                            {job.device?.imei && (
+                              <VehicleStatusBadge imei={job.device.imei} />
+                            )}
+                          </div>
                           
                           <div className="grid grid-cols-2 gap-4">
                             <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">

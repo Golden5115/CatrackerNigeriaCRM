@@ -112,6 +112,7 @@ model Job {
   serverConfig      Boolean   @default(false)
   platformId        String?
   onboarded         Boolean   @default(false)
+  expirationDate    DateTime?
   paymentStatus     String    @default("UNPAID")
   amountPaid        Decimal   @default(0.00)
   paymentCollector  String?

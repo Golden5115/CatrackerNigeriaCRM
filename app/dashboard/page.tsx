@@ -3,10 +3,11 @@ import { verifySession } from "@/lib/session"
 import { 
   Car, Wrench, Cpu, AlertCircle, Smartphone, 
   TrendingUp, Calendar, Package, Hash, User,
-  Activity, CheckCircle2, DollarSign
+  Activity, CheckCircle2, DollarSign, MapPin
 } from "lucide-react"
 import Link from "next/link"
-import OverviewFilter from "@/components/OverviewFilter"
+import OverviewFiltersClient from "@/components/OverviewFiltersClient"
+import OfflineAlertCard from "@/components/OfflineAlertCard"
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +50,8 @@ export default async function DashboardOverview({
   const [
     installsThisMonth, installsThisWeek, installsLastWeek,
     totalLeads, convertedLeads, pendingSupport,
-    completedSupport, pendingPayments, distinctClients, distinctInstallersRaw
+    completedSupport, pendingPayments, distinctClients, distinctInstallersRaw,
+    expiringSoon
   ] = await Promise.all([
     prisma.job.count({ where: { isArchived: false, installDate: { gte: startOfThisMonth }, status: { in: completedStatuses } } }),
     prisma.job.count({ where: { isArchived: false, installDate: { gte: startOfThisWeek }, status: { in: completedStatuses } } }),
@@ -60,7 +62,17 @@ export default async function DashboardOverview({
     prisma.job.count({ where: { isArchived: false, jobType: { not: 'NEW_INSTALL' }, status: { in: ['CONFIGURED', 'ACTIVE'] } } }),
     prisma.job.count({ where: { isArchived: false, status: 'ACTIVE', paymentStatus: { not: 'PAID' } } }),
     prisma.client.findMany({ where: { isArchived: false }, select: { leadSource: true }, distinct: ["leadSource"] }),
-    prisma.job.findMany({ where: { isArchived: false, installerName: { not: null } }, select: { installerName: true }, distinct: ["installerName"] })
+    prisma.job.findMany({ where: { isArchived: false, installerName: { not: null } }, select: { installerName: true }, distinct: ["installerName"] }),
+    prisma.job.count({ 
+      where: { 
+        isArchived: false, 
+        status: 'ACTIVE', 
+        expirationDate: { 
+          gte: new Date(), 
+          lte: new Date(new Date().setDate(new Date().getDate() + 14)) 
+        } 
+      } 
+    })
   ]);
 
   // Map and clean up lead sources and installers for the filter dropdowns
@@ -131,6 +143,18 @@ export default async function DashboardOverview({
     },
     orderBy: { installDate: 'desc' }
   });
+
+  // Top Locations Logic
+  const locationStats: Record<string, number> = {};
+  filteredInstallsList.forEach(job => {
+    const stateRaw = job.vehicle?.client?.state;
+    const loc = stateRaw && stateRaw.trim() !== '' ? stateRaw.trim() : "Unknown / Not Set";
+    locationStats[loc] = (locationStats[loc] || 0) + 1;
+  });
+  
+  const sortedLocations = Object.entries(locationStats)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
 
   const conversionRate = totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0;
 
@@ -263,8 +287,20 @@ export default async function DashboardOverview({
       {/* ============================== */}
       {/* ROW 3: BOTTLENECKS & ALERTS    */}
       {/* ============================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-5">
         
+        {/* EXPIRING SOON */}
+        <Link href="/dashboard/psf?tab=expiring" className="bg-white rounded-3xl p-5 shadow-sm border border-orange-100 flex items-center gap-4 transition hover:shadow-md hover:border-orange-200">
+          <div className="bg-orange-50 p-4 rounded-2xl text-orange-500"><Calendar size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Expiring ≤ 14d</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-2xl font-black text-orange-600">{expiringSoon}</p>
+              {expiringSoon > 0 && <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">CALL</span>}
+            </div>
+          </div>
+        </Link>
+
         {/* SUPPORT PENDING (Fixed to show actual new support count) */}
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex items-center gap-4 transition hover:shadow-md">
           <div className="bg-orange-50 p-4 rounded-2xl text-orange-500"><Wrench size={20} /></div>
@@ -301,40 +337,90 @@ export default async function DashboardOverview({
           </div>
         </div>
 
+        {/* OFFLINE VEHICLES */}
+        <OfflineAlertCard />
+
       </div>
 
       {/* ============================== */}
-      {/* ROW 4: INSTALLER PERFORMANCE   */}
+      {/* ROW 4: PERFORMANCE & LOCATIONS */}
       {/* ============================== */}
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mt-8">
-        <details className="group marker:content-['']">
-          <summary className="flex items-center justify-between cursor-pointer list-none">
-            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span> Top Installers ({displayFilterName})
-            </h3>
-            <div className="text-gray-400 group-open:rotate-180 transition-transform duration-200">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </div>
-          </summary>
-          
-          <div className="mt-6 pt-6 border-t border-gray-50">
-            {installerStats.length === 0 ? (
-              <p className="text-sm text-gray-500 font-medium text-center py-4">No completed installations found for this period.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {installerStats.map((stat, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 transition hover:bg-gray-100">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-white p-2 rounded-xl shadow-sm"><Wrench size={16} className="text-green-600"/></div>
-                      <span className="text-sm font-bold text-gray-800">{stat.installerName}</span>
-                    </div>
-                    <span className="text-xl font-black text-green-700">{stat._count._all}</span>
-                  </div>
-                ))}
+      <div className="flex flex-col gap-5 mt-8">
+        
+        {/* Top Installers */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+          <details className="group marker:content-['']">
+            <summary className="flex items-center justify-between cursor-pointer list-none">
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500"></span> Top Installers ({displayFilterName})
+              </h3>
+              <div className="text-gray-400 group-open:rotate-180 transition-transform duration-200">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </div>
-            )}
-          </div>
-        </details>
+            </summary>
+            
+            <div className="mt-6 pt-6 border-t border-gray-50">
+              {installerStats.length === 0 ? (
+                <p className="text-sm text-gray-500 font-medium text-center py-4">No completed installations found for this period.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {installerStats.map((stat, index) => (
+                    <div key={stat.installerName} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 transition hover:bg-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-xs font-bold text-gray-600">
+                          {index + 1}
+                        </div>
+                        <span className="font-bold text-gray-800 text-sm truncate max-w-[120px]">{stat.installerName}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-gray-200">
+                        <span className="text-base font-black text-gray-900">{stat._count._all}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
+
+        {/* Top Locations */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+          <details className="group marker:content-['']">
+            <summary className="flex items-center justify-between cursor-pointer list-none">
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-500"></span> Top Locations ({displayFilterName})
+              </h3>
+              <div className="text-gray-400 group-open:rotate-180 transition-transform duration-200">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+            </summary>
+            
+            <div className="mt-6 pt-6 border-t border-gray-50">
+              {sortedLocations.length === 0 ? (
+                <p className="text-sm text-gray-500 font-medium text-center py-4">No completed installations found for this period.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {sortedLocations.map(([location, count], index) => (
+                    <div key={location} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 transition hover:bg-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-xs font-bold text-indigo-600">
+                          <MapPin size={14} />
+                        </div>
+                        <span className={`font-bold text-sm truncate max-w-[120px] ${location === "Unknown / Not Set" ? 'text-gray-400 italic' : 'text-gray-800'}`}>
+                          {location}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-gray-200">
+                        <span className="text-base font-black text-gray-900">{count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
+
       </div>
 
       {/* ============================== */}
@@ -350,40 +436,14 @@ export default async function DashboardOverview({
             </div>
             
             <div className="flex flex-col sm:flex-row items-center gap-3">
-               {/* 🟢 INTEGRATION 3: New Lead Source & Installer Filters */}
-               <form method="GET" className="flex items-center gap-2">
-                 {/* Preserve month and year if they exist in the URL */}
-                 {params?.month && <input type="hidden" name="month" value={params.month as string} />}
-                 {params?.year && <input type="hidden" name="year" value={params.year as string} />}
-                 
-                 <select 
-                   name="installer" 
-                   defaultValue={filterInstaller || "ALL"}
-                   className="bg-white border border-gray-200 text-gray-700 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:border-green-500 shadow-sm cursor-pointer"
-                 >
-                   <option value="ALL">All Installers</option>
-                   {installerNames.map(name => (
-                     <option key={name} value={name}>{name}</option>
-                   ))}
-                 </select>
-
-                 <select 
-                   name="leadSource" 
-                   defaultValue={filterLeadSource || "ALL"}
-                   className="bg-white border border-gray-200 text-gray-700 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:border-blue-500 shadow-sm cursor-pointer"
-                 >
-                   <option value="ALL">All Lead Sources</option>
-                   {leadSources.map(source => (
-                     <option key={source} value={source}>{source}</option>
-                   ))}
-                 </select>
-                 <button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm">
-                   Apply
-                 </button>
-               </form>
-
-               {/* Your existing date filter remains untouched */}
-               <OverviewFilter />
+               <OverviewFiltersClient 
+                 installerNames={installerNames}
+                 leadSources={leadSources}
+                 defaultMonth={filterMonth.toString()}
+                 defaultYear={filterYear.toString()}
+                 defaultInstaller={filterInstaller || "ALL"}
+                 defaultLeadSource={filterLeadSource || "ALL"}
+               />
             </div>
          </div>
          

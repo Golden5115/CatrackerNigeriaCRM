@@ -7,6 +7,7 @@ import LocalSearchInput from "@/components/LocalSearchInput";
 import SortControl from "@/components/SortControl"; 
 import Pagination from "@/components/Pagination";
 import DateEditor from "@/components/DateEditor"; // 👈 NEW
+import { VehicleStatusBadge } from "@/components/VehicleStatusBadge";
 
 export const dynamic = 'force-dynamic';
 
@@ -87,9 +88,10 @@ async function VehiclesTable({ sort, query, page }: { sort: string, query: strin
                   </td>
                   <td className="px-4 py-3">
                     {job.device ? (
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="text-[11px] font-mono font-bold text-gray-800 flex items-center gap-1"><Cpu size={10} className="text-gray-400"/> IMEI: {job.device.imei}</div>
                         {job.simCard && <div className="text-[10px] text-gray-500 flex items-center gap-1">SIM: {job.simCard.simNumber}</div>}
+                        <VehicleStatusBadge imei={job.device.imei} />
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400 italic">No hardware assigned</span>
