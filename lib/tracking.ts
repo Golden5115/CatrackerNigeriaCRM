@@ -7,6 +7,8 @@ export interface TrackingDevice {
   online: string; // usually "online" or "offline" or "ack" etc
   time: string; // last connect timestamp e.g. "2026-07-15 12:00:00"
   expiration_date: string; // e.g. "2026-07-15 12:00:00"
+  plate_number?: string;
+  sim_number?: string;
   // ... other fields
 }
 
